@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/liji/data/fpga/prj/pynq-ssd/vitis/zynq_detector/src/.compile_commands",
+  "command": "/opt/xilinx/Vitis/2024.2/gnu/aarch32/lin/gcc-arm-none-eabi/bin/arm-none-eabi-gcc -isystem /home/liji/data/fpga/prj/pynq-ssd/vitis/pynq-ssd-platform-freertos/export/pynq-ssd-platform-freertos/sw/freertos_ps7_cortexa9_0/include -isystem /opt/xilinx/Vitis/2024.2/gnu/aarch32/lin/gcc-arm-none-eabi/x86_64-oesdk-linux/usr/lib/arm-xilinx-eabi/gcc/arm-xilinx-eabi/13.3.0/include -isystem /opt/xilinx/Vitis/2024.2/gnu/aarch32/lin/gcc-arm-none-eabi/x86_64-oesdk-linux/usr/lib/arm-xilinx-eabi/gcc/arm-xilinx-eabi/13.3.0/include-fixed -isystem /opt/xilinx/Vitis/2024.2/gnu/aarch32/lin/gcc-arm-none-eabi/aarch32-xilinx-eabi/usr/include  -O2 -DSDT -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard  -MMD -MP -specs=/home/liji/data/fpga/prj/pynq-ssd/vitis/pynq-ssd-platform-freertos/export/pynq-ssd-platform-freertos/sw/freertos_ps7_cortexa9_0/Xilinx.spec -I/home/liji/data/fpga/prj/pynq-ssd/vitis/pynq-ssd-platform-freertos/export/pynq-ssd-platform-freertos/sw/freertos_ps7_cortexa9_0/include -Wall -Wextra      -O0  -g3     -U__clang__ \"-D__FILENAME__=\\\"\\$$(subst /home/liji/data/fpga/prj/pynq-ssd/vitis/zynq_detector/src/,,\\$$(abspath \\$$<))\\\"\" -o CMakeFiles/zynq_detector.elf.dir/freertos_hello_world.c.obj -c /home/liji/data/fpga/prj/pynq-ssd/vitis/zynq_detector/src/freertos_hello_world.c",
+  "file": "/home/liji/data/fpga/prj/pynq-ssd/vitis/zynq_detector/src/freertos_hello_world.c"
+}
+]

@@ -1,0 +1,16 @@
+{
+  "name": "zynq_detector",
+  "type": "HOST",
+  "platform": "pynq-ssd-platform-freertos",
+  "domain": "freertos_ps7_cortexa9_0",
+  "cpuInstance": "ps7_cortexa9_0",
+  "cpuType": "cortex-a9",
+  "os": "freertos",
+  "configuration": {
+    "componentType": "HOST",
+    "hostToolchainConfigurations": []
+  },
+  "domainRealName": "freertos_ps7_cortexa9_0",
+  "applicationFlow": "EMBEDDED",
+  "template": "freertos_hello_world"
+}
