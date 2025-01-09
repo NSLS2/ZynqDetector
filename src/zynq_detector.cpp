@@ -10,7 +10,7 @@
 #include "xil_printf.h"
 #include "xparameters.h"
 // Project includes
-#include "detector.hpp"
+#include "zynq_detector.hpp"
 #include "pynq_ssd_msg.hpp"
 
 #define TIMER_ID	1
@@ -42,42 +42,17 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
-void ZynqDetector::udp_rx_task( void *pvParameters )
-{
-    uint16_t op;
-    uint16_t obj;
-    udp_msg_t udp_msg;
-
-    while(1)
-    {
-        // Read UDP packet
-        op = udp_msg.op >> 14;
-        uint16_t obj = udp_msg.op & 0x3F;
-        switch( obj )
-        {
-            case MSG_VER:
-                // send a fast_req to fast_access_task
-                break;
-            default:
-                ;
-        }
-    }
-}
-
-void ZynqDetector::udp_tx_task( void *pvParameters )
-{
-    while(1)
-    {
-        active_resp_queue = ( resp_queue_set, portMAX_DELAY );
-
-        if ( active_resp_queue == )
-    }
-
-}
 
 void ZynqDetector::fast_access_task( void *pvParameters )
 {
-    
+    fast_access_req_t fast_access_req;
+
+    while(1)
+    {
+        xQueueReceive( 	(QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
+						&fast_access_req,	/* Data is read into this address. */
+						portMAX_DELAY );	/* Wait without a timeout for data. */
+    }
 }
 
 void ZynqDetector::slow_access_task( void *pvParameters )
@@ -86,7 +61,7 @@ void ZynqDetector::slow_access_task( void *pvParameters )
 
 }
 
-void ZynqDetector::asic_cfg_task( void *pvParameters )
+void ZynqDetector::bulk_access_task( void *pvParameters )
 {
 
 }
@@ -95,32 +70,35 @@ ZynqDetector::ZynqDetector( void )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
 
-
-	// Create queues
+    //=============================
+    // Queues
+	//=============================
+    // Create queues
 	fast_access_req_queue  = xQueueCreate( 100, sizeof( fast_access_req_t ) );
 	slow_access_req_queue  = xQueueCreate( 100, sizeof( slow_access_req_t ) );
-    asic_cfg_req_queue     = xQueueCreate( 4,   sizeof( asic_cfg_req_t ) );
+    bulk_access_req_queue  = xQueueCreate( 4,   sizeof( bulk_access_req_t ) );
 	fast_access_resp_queue = xQueueCreate( 100, sizeof( fast_access_resp_t ) );
 	slow_access_resp_queue = xQueueCreate( 100, sizeof( slow_access_resp_t ) );
-    asic_cfg_resp_queue    = xQueueCreate( 4,   sizeof( asic_cfg_resp_t ) );
+    bulk_access_resp_queue = xQueueCreate( 4,   sizeof( bulk_access_resp_t ) );
 
     // Create queue sets
     slow_req_queue_set  = xQueueCreateSet(
         SLOW_ACCESS_REQ_QUEUE_SIZE +
-        ASIC_CFG_REQ_QUEUE_SIZE );
+        BULK_ACCESS_REQ_QUEUE_SIZE );
 
     xQueueAddToSet( slow_access_req_queue, slow_req_queue_set );
-    xQueueAddToSet( asic_cfg_req_queue, slow_req_queue_set );
+    xQueueAddToSet( bulk_access_req_queue, slow_req_queue_set );
 
     resp_queue_set = xQueueCreateSet( 
         FAST_ACCESS_RESP_QUEUE_SIZE +
         SLOW_ACCESS_RESP_QUEUE_SIZE +
-        ASIC_CFG_RESP_QUEUE_SIZE );
+        BULK_ACCESS_RESP_QUEUE_SIZE );
 
     xQueueAddToSet( fast_access_resp_queue, resp_queue_set );
     xQueueAddToSet( slow_access_resp_queue, resp_queue_set );
-    xQueueAddToSet( asic_cfg_resp_queue, resp_queue_set );
+    xQueueAddToSet( bulk_access_resp_queue, resp_queue_set );
 
+    //=============================
     // Create tasks
 	xTaskCreate( udp_rx_task, 				 // The function that implements the task.
                  ( const char * ) "UDP_RX",  // Text name for the task, provided to assist debugging only.
@@ -150,33 +128,22 @@ ZynqDetector::ZynqDetector( void )
 				 tskIDLE_PRIORITY + 1,
 				 &slow_access_task_handle );
 
-	/* Create a timer with a timer expiry of 10 seconds. The timer would expire
-	 after 10 seconds and the timer call back would get called. In the timer call back
-	 checks are done to ensure that the tasks have been running properly till then.
-	 The tasks are deleted in the timer call back and a message is printed to convey that
-	 the example has run successfully.
-	 The timer expiry is set to 10 seconds and the timer set to not auto reload. */
+	// Create a timer
 	xPollTimer = xTimerCreate( (const char *) "Timer",
 							   x1second,
-							   pdFALSE,
+							   pdTRUE,
 							   (void *) TIMER_ID,
 							   vTimerCallback);
 	// Check timer creation
 	configASSERT( xPollTimer );
 
-	/* start the timer with a block time of 0 ticks. This means as soon
-	   as the schedule starts the timer will start running and will expire after
-	   10 seconds */
+	// start the timer
 	xTimerStart( xPollTimer, 0 );
 
-	/* Start the tasks and timer running. */
+	// Start the tasks
 	vTaskStartScheduler();
 
-	/* If all is well, the scheduler will now be running, and the following line
-	will never be reached.  If the following line does execute, then there was
-	insufficient FreeRTOS heap memory available for the idle and/or timer tasks
-	to be created.  See the memory management section on the FreeRTOS web site
-	for more details. */
+
 	for( ;; );
 }
 
@@ -234,3 +201,83 @@ static void poll_timer_callback( TimerHandle_t pxTimer )
 	
 }
 
+
+void ZynqDetector::udp_rx_task( void *pvParameters )
+{
+    uint16_t op;
+    uint16_t obj;
+    udp_msg_t udp_msg;
+
+    uint8_t obj_type = 0;
+
+    fast_access_req_t fast_access_req;
+    slow_access_req_t slow_access_req;
+    bulk_access_req_t bulk_access_req;
+
+    while(1)
+    {
+        // Read UDP packet
+        op = udp_msg.op >> 14;
+        uint16_t obj = udp_msg.op & 0x3F;
+        switch( obj )
+        {
+            case MSG_VER:
+                // send a fast_req to fast_access_task
+                obj_type = FAST_ACCESS_REQ;
+                break;
+            default:
+                ;
+        }
+
+        switch( obj_type )
+        {
+            case FAST_ACCESS_REQ:
+                xQueueSend( fast_access_req_queue,
+            				fast_access_req,
+                            0UL );
+                break;
+
+            case SLOW_ACCESS_REQ:
+                xQueueSend( slow_access_req_queue,
+            				slow_access_req,
+                            0UL );
+                break;
+            
+            case BULK_ACCESS_REQ:
+                xQueueSend( bulk_access_req_queue,
+            				bulk_access_req,
+                            0UL );
+                break;
+
+            default:
+                ;
+                
+        }
+        
+    }
+}
+
+void ZynqDetector::udp_tx_task( void *pvParameters )
+{
+    while(1)
+    {
+        active_resp_queue = ( resp_queue_set, portMAX_DELAY );
+
+        if ( active_resp_queue == fast_access_resp_queue )
+        {
+
+        }
+        else
+        {
+            if ( active_resp_queue == slow_access_resp_queue )
+            {
+
+            }
+            else // active_resp_queue == bulk_access_resp_queue
+            {
+                
+            }
+        }
+    }
+
+}

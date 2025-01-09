@@ -28,11 +28,23 @@ axi_reg::~axi_reg()
 
 //-----------------------------------------
 
+void axi_reg::reg_wr(size_t offset, uint32_t value)
+{
+    while( reg_lock.exchange( true, std::memory_order_acquire) );
+    *(volatile uint32_t *)(axi_base_addr + (offset)) = (value);
+    reg_lock.store( false, std::memory_order_release );
+}
 
 //-----------------------------------------
 
+uint32_t axi_reg::reg_rd(size_t offset)
+{
+    while( reg_lock.exchange( true, std::memory_order_acquire) );
+    uint32_t value = (*(volatile uint32_t *)(axi_base_addr + (offset)));
+    reg_lock.store( false, std::memory_order_release );
 
-//-----------------------------------------
+    return value;
+}
 
 //=========================================
 #endif
@@ -103,9 +115,9 @@ void axi_reg::reg_wr(size_t offset, uint32_t value)
     }
 
     volatile uint32_t *registerPtr = reg + offset / sizeof(uint32_t);
-    reg_lock.lock();
+    while( reg_lock.exchange( true, std::memory_order_acquire) );
     *registerPtr = value;
-    reg_lock.unlock();
+    reg_lock.store( false, std::memory_order_release );
 
 
     trace_reg( __func__,

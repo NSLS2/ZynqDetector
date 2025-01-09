@@ -27,11 +27,12 @@ set(USER_UNDEFINED_SYMBOLS
 set(USER_INCLUDE_DIRECTORIES
 )
 set(USER_COMPILE_SOURCES
-"detector.cpp"
+"zynq_detector.cpp"
 "udp_rx.cpp"
 "udp_tx.cpp"
 "fpga.cpp"
 "hello_detector.cpp"
+"zynq_detector_network.cpp"
 )
 
 # -----------------------------------------
