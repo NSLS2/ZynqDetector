@@ -1,12 +1,17 @@
-/* FreeRTOS includes. */
+// C++ includes
+#include <iterator>
+#include <portmacro.h>
+// FreeRTOS includes
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "timers.h"
-/* Xilinx includes. */
+// Xilinx includes
 #include "xil_printf.h"
 #include "xparameters.h"
+// Project includes
 #include "detector.hpp"
+#include "pynq_ssd_msg.hpp"
 
 #define TIMER_ID	1
 #define DELAY_10_SECONDS	10000UL
@@ -15,9 +20,6 @@
 /*-----------------------------------------------------------*/
 
 /* The Tx and Rx tasks as described at the top of this file. */
-static void prvTxTask( void *pvParameters );
-static void prvRxTask( void *pvParameters );
-static void vTimerCallback( TimerHandle_t pxTimer );
 /*-----------------------------------------------------------*/
 
 /* The queue used by the Tx and Rx tasks, as described at the top of this
@@ -41,25 +43,89 @@ static StaticQueue_t xStaticQueue;
 #endif
 
 void ZynqDetector::udp_rx_task( void *pvParameters )
-{}
+{
+    uint16_t op;
+    uint16_t obj;
+    udp_msg_t udp_msg;
+
+    while(1)
+    {
+        // Read UDP packet
+        op = udp_msg.op >> 14;
+        uint16_t obj = udp_msg.op & 0x3F;
+        switch( obj )
+        {
+            case MSG_VER:
+                // send a fast_req to fast_access_task
+                break;
+            default:
+                ;
+        }
+    }
+}
 
 void ZynqDetector::udp_tx_task( void *pvParameters )
-{}
+{
+    while(1)
+    {
+        active_resp_queue = ( resp_queue_set, portMAX_DELAY );
+
+        if ( active_resp_queue == )
+    }
+
+}
 
 void ZynqDetector::fast_access_task( void *pvParameters )
-{}
+{
+    
+}
 
 void ZynqDetector::slow_access_task( void *pvParameters )
-{}
+{
+    active_slow_req_queue  = ( slow_req_queue_set, portMAX_DELAY );
+
+}
+
+void ZynqDetector::asic_cfg_task( void *pvParameters )
+{
+
+}
 
 ZynqDetector::ZynqDetector( void )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
 
+
+	// Create queues
+	fast_access_req_queue  = xQueueCreate( 100, sizeof( fast_access_req_t ) );
+	slow_access_req_queue  = xQueueCreate( 100, sizeof( slow_access_req_t ) );
+    asic_cfg_req_queue     = xQueueCreate( 4,   sizeof( asic_cfg_req_t ) );
+	fast_access_resp_queue = xQueueCreate( 100, sizeof( fast_access_resp_t ) );
+	slow_access_resp_queue = xQueueCreate( 100, sizeof( slow_access_resp_t ) );
+    asic_cfg_resp_queue    = xQueueCreate( 4,   sizeof( asic_cfg_resp_t ) );
+
+    // Create queue sets
+    slow_req_queue_set  = xQueueCreateSet(
+        SLOW_ACCESS_REQ_QUEUE_SIZE +
+        ASIC_CFG_REQ_QUEUE_SIZE );
+
+    xQueueAddToSet( slow_access_req_queue, slow_req_queue_set );
+    xQueueAddToSet( asic_cfg_req_queue, slow_req_queue_set );
+
+    resp_queue_set = xQueueCreateSet( 
+        FAST_ACCESS_RESP_QUEUE_SIZE +
+        SLOW_ACCESS_RESP_QUEUE_SIZE +
+        ASIC_CFG_RESP_QUEUE_SIZE );
+
+    xQueueAddToSet( fast_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( slow_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( asic_cfg_resp_queue, resp_queue_set );
+
+    // Create tasks
 	xTaskCreate( udp_rx_task, 				 // The function that implements the task.
-                 ( const char * ) "UDP_RX", 	// Text name for the task, provided to assist debugging only.
-				 configMINIMAL_STACK_SIZE, // The stack allocated to the task.
-				 NULL, 					   // The task parameter is not used, so set to NULL.
+                 ( const char * ) "UDP_RX",  // Text name for the task, provided to assist debugging only.
+				 configMINIMAL_STACK_SIZE,   // The stack allocated to the task.
+				 NULL, 					     // The task parameter is not used, so set to NULL.
 				 tskIDLE_PRIORITY,			 // The task runs at the idle priority.
 				 &udp_rx_task_handle );
 
@@ -84,12 +150,6 @@ ZynqDetector::ZynqDetector( void )
 				 tskIDLE_PRIORITY + 1,
 				 &slow_access_task_handle );
 
-	// Create queues and check if the queues have been created.
-	fast_access_req_queue  = xQueueCreate( 100, sizeof( HWstring ) );
-	slow_access_req_queue  = xQueueCreate( 100, sizeof( HWstring ) );
-	fast_access_resp_queue = xQueueCreate( 100, sizeof( HWstring ) );
-	slow_access_resp_queue = xQueueCreate( 100, sizeof( HWstring ) );
-
 	/* Create a timer with a timer expiry of 10 seconds. The timer would expire
 	 after 10 seconds and the timer call back would get called. In the timer call back
 	 checks are done to ensure that the tasks have been running properly till then.
@@ -101,7 +161,7 @@ ZynqDetector::ZynqDetector( void )
 							   pdFALSE,
 							   (void *) TIMER_ID,
 							   vTimerCallback);
-	/* Check the timer was created. */
+	// Check timer creation
 	configASSERT( xPollTimer );
 
 	/* start the timer with a block time of 0 ticks. This means as soon
@@ -158,7 +218,7 @@ char Recdstring[15] = "";
 }
 
 /*-----------------------------------------------------------*/
-static void vTimerCallback( TimerHandle_t pxTimer )
+static void poll_timer_callback( TimerHandle_t pxTimer )
 {
 	long lTimerId;
 	configASSERT( pxTimer );
@@ -169,18 +229,8 @@ static void vTimerCallback( TimerHandle_t pxTimer )
 		xil_printf("FreeRTOS Hello World Example FAILED");
 	}
 
-	/* If the RxtaskCntr is updated every time the Rx task is called. The
-	 Rx task is called every time the Tx task sends a message. The Tx task
-	 sends a message every 1 second.
-	 The timer expires after 10 seconds. We expect the RxtaskCntr to at least
-	 have a value of 9 (TIMER_CHECK_THRESHOLD) when the timer expires. */
-	if (RxtaskCntr >= TIMER_CHECK_THRESHOLD) {
-		xil_printf("Successfully ran FreeRTOS Hello World Example");
-	} else {
-		xil_printf("FreeRTOS Hello World Example FAILED");
-	}
-
-	vTaskDelete( xRxTask );
-	vTaskDelete( xTxTask );
+    if( std::size(poll_list) != 0 )
+    {}
+	
 }
 
