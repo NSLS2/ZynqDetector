@@ -18,6 +18,8 @@
 #include "msg.hpp"
 #include "fpga.hpp"
 
+typedef uint32_t reg_addr_t;
+
 // Operations
 const uint8_t REG_WR  { 0 };
 const uint8_t REG_RD  { 1 };
@@ -41,7 +43,40 @@ const std::vector<msg_code> msg_codec
     , msg_code { 0x1, 4, 0, 4 }
     };
 
+// Peripheral device definitions
+typedef uint8_t interface_type_t;
+const interface_type_t I2C = 0;
+const interface_type_t SPI = 1;
 
+typedef uint8_t device_t;
+const device_t AD5254 = 0;
+const device_t AD5593 = 1;
+const device_t AD9249 = 2;
+
+typedef struct
+{
+    device_t  device;
+    uint8_t   addr;
+} device_descriptor_t;
+
+// device interface descriptor. Used for interface access in slow_access_task
+typedef struct
+{
+    uint8_t if_type; // interface type: I2C, SPI, etc
+    uint8_t if_no;   // interface number: 0, 1, ... to be used in combination with interf_type
+    uint8_t if_data_reg;   // data register of the interface
+    uint8_t if_instr_reg;  // instruction register for the interface
+    std::vector<device_descriptor_t> dev_desc_v {};  // vector of devices connected to the interface
+} interface_descriptor_t;
+
+std::vector<device_descriptor_t> dev_desc_v{};
+
+std::vector<interface_descriptor_t> if_desc_v{};
+
+void device_registration( std::vector<device_interface_t> dev_if_v& )
+{
+    dev_if_v.push_back({ IF_TYPE_I2C, 0, {AD5254, AD}})
+}
 
 
 class ZynqDetector
@@ -98,6 +133,11 @@ private:
     static void fast_access_task( void *pvParameters );  // access registers directly (fast)
     static void slow_access_task( void *pvParameters );  // access asic/peripherals for small amount of data (slow)
     static void bulk_access_task( void *pvParameters );  // access asic/peripheral for bulk data (slowest)
+
+    // msg_id parsers
+    void access_mode_decode( msg_id_t msg_id );
+    reg_addr_t fast_access_parse( msg_id_t msg_id );
+    
 
     // Task handlers
     TaskHandle_t  udp_rx_task_handle;

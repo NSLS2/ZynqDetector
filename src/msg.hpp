@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+typedef uint16_t msg_id_t;
+
 const uint16_t MAX_UDP_MSG_LENG = 4096;
 const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
 
