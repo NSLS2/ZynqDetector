@@ -3,6 +3,7 @@
 #include <portmacro.h>
 // FreeRTOS includes
 #include "FreeRTOS.h"
+#include "msg.hpp"
 #include "task.h"
 #include "queue.h"
 #include "timers.h"
@@ -69,6 +70,10 @@ void ZynqDetector::bulk_access_task( void *pvParameters )
 ZynqDetector::ZynqDetector( void )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
+
+    // Network
+    network_init();
+
 
     //=============================
     // Queues
@@ -201,6 +206,29 @@ static void poll_timer_callback( TimerHandle_t pxTimer )
 	
 }
 
+void ZynqDetector::network_init()
+{
+    struct freertos_sockaddr sock_addr;
+    sock_addr.sin_port = FreeRTOS_htons( 1234 );
+    sock_addr.sin_addr = FreeRTOS_inet_addr( ip_addr );
+
+    // Initialize the FreeRTOS+TCP stack
+    FreeRTOS_IPInit( ip_address, netmask, gateway, dns, MACAddress);
+
+    // Create a UDP socket
+    int32_t socket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
+
+    if (socket < 0) {
+        // Handle error
+    }
+
+    // Bind the socket to the UDP port
+    if (FreeRTOS_bind( socket, &sock_addr, sizeof(sock_addr)) < 0) {
+        // Handle error
+    }
+
+}
+
 
 void ZynqDetector::udp_rx_task( void *pvParameters )
 {
@@ -214,11 +242,26 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
     slow_access_req_t slow_access_req;
     bulk_access_req_t bulk_access_req;
 
+    Socket_t xUDPSocket;
+    struct freertos_sockaddr xSourceAddress;
+    socklen_t xSourceAddressLength = sizeof(xSourceAddress);
+    int32_t lBytesReceived;
+    uint8_t ucBuffer[MAX_UDP_MSG_LENG];
+
+    //=============================
+    // Initialize network
+    //=============================
+    xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
+
+
+
     while(1)
     {
+        lReceivedBytes = FreeRTOS_recvfrom( xSocket, ucReceiveBuffer, sizeof( ucReceiveBuffer ), 0, ( struct freertos_sockaddr * ) &xClientAddress, &xClientAddressLength );
+
         // Read UDP packet
         op = udp_msg.op >> 14;
-        uint16_t obj = udp_msg.op & 0x3F;
+        uint16_t obj = udp_msg.msg_id & 0x3F;
         switch( obj )
         {
             case MSG_VER:
@@ -242,7 +285,7 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
             				slow_access_req,
                             0UL );
                 break;
-            
+
             case BULK_ACCESS_REQ:
                 xQueueSend( bulk_access_req_queue,
             				bulk_access_req,

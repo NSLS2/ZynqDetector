@@ -31,12 +31,13 @@ const uint8_t ASIC_WR { 6 };
 const uint8_t ASIC_RD { 7 };
 
 // Message coding
-struct msg_code {
-    uint_fast16_t  msg_id;
-    uint_fast8_t   msg_leng;
-    uint_fast8_t   op;
-    uint_fast32_t  addr;  // OP dependent, register address/I2C address/peripheral index/...
-};
+typedef struct {
+    uint16_t  preamble;
+    uint16_t  msg_id;
+    uint8_t   msg_leng;
+    uint8_t   op;
+    uint32_t  addr;  // OP dependent, register address/I2C address/peripheral index/...
+} udp_msg_t;
 
 const std::vector<msg_code> msg_codec
     { msg_code { 0x0, 4, 0, 0 }
