@@ -141,14 +141,15 @@ void network::read_network_config( const std::string& filename )
 
     f_close( &file );
     f_mount(NULL, "", 1);
-
 }
 
 
 network::network()
 {
+    read_network_config( "config" );
+
     struct freertos_sockaddr sock_addr;
-    sock_addr.sin_port = FreeRTOS_htons( 1234 );
+    sock_addr.sin_port = FreeRTOS_htons( 25913 );
     sock_addr.sin_addr = FreeRTOS_inet_addr( ip_addr );
 
     // Initialize the FreeRTOS+TCP stack
@@ -157,19 +158,22 @@ network::network()
     // Create a UDP socket
     int32_t socket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
 
-    if (socket < 0) {
+    if (socket < 0)
+    {
         // Handle error
+        std::cerr << "Failed to create socket (error )" << socket << '\n';
     }
 
     // Bind the socket to the UDP port
     if (FreeRTOS_bind( socket, &sock_addr, sizeof(sock_addr)) < 0) {
         // Handle error
+        std::cerr << "Failed to bind the socket to the port (error )" << socket << '\n';
     }
 
 }
 
 
-void ZynqDetector::udp_rx_task( void *pvParameters )
+void network::udp_rx_task( void *pvParameters )
 {
     uint16_t op;
     uint16_t obj;
