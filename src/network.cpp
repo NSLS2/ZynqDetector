@@ -5,18 +5,29 @@
 #include <vector>
 #include <cctype>
 #include <cstdint>
+#include <algorithm>
+
+#include "ff.h"       // FatFs header
+#include "FreeRTOS.h" // FreeRTOS header
+#include "task.h"
 
 #include "network.hpp"
 
 //==============================================================
 
-template <typename Iterator>
-bool string_to_addr( const std::string& addr, Iterator iter )
+bool string_to_addr( const std::string& addr_str, uint8_t* addr )
 {
-    std::stringstream ss( addr );
+    std::stringstream ss( addr_str );
 
-    bool is_ip = ( addr.find( '.' ) != std::string::npos );
+    bool is_ip = ( addr_str.find( '.' ) != std::string::npos );
     auto separator = is_ip ? '.' : ':';
+    auto num_separator = std::count( addr_str.begin(), addr_str.end(), separator );
+    if ( ( is_ip && num_separator != 3 ) || ( !is_ip && num_separator != 5 ) )
+    {
+        std::cerr << "Wrong address string format" << addr_str << '\n';
+        return false;
+    }
+
     std::string segment;
 
     int i = 0;
@@ -47,14 +58,8 @@ bool string_to_addr( const std::string& addr, Iterator iter )
                 return false;  // Invalid hex segment
             }            
         }
-        *(iter++) = static_cast<uint8_t>( byte );
+        *(addr++) = static_cast<uint8_t>( byte );
     }
-
-    if( ( is_ip && (i!=4) ) || ( !is_ip && (i!=6) ) )
-    {
-        return false;
-    }
-    
 
     return true;
 }
@@ -66,6 +71,28 @@ bool string_to_addr( const std::string& addr, Iterator iter )
 
 void network::read_network_config( const std::string& filename )
 {
+    FATFS fs;    // File system object
+    FRESULT res; // Result code
+    FIL file;
+    UINT br;
+
+    char buff[50];
+    int buff_index = 0;
+    
+    res = f_mount(&fs, "", 1); // Mount the default drive
+    if (res != FR_OK)
+    {
+        // Handle error
+
+    }
+
+    res = f_open(&file, "filename.txt", FA_READ | FA_WRITE);
+    if (res != FR_OK)
+    {
+        // Handle error
+    }
+
+
     std::ifstream file( filename );
     if ( !file.is_open() )
     {
@@ -75,9 +102,18 @@ void network::read_network_config( const std::string& filename )
 
     std::string line;
 
-    while( std::getline(file, line) )
+    //while( std::getline(file, line) )
+    while (f_read(&file, &buff[buff_index], 1, &br) == FR_OK && br > 0)
     {
-        std::istringstream stream( line );
+        if ( buff[buff_index] != '\n' && buff[buff_index] != '\r')
+        {
+            ++buff_index;
+            continue;
+        }
+        
+        buff[buff_index] = '\0'; // Null-terminate the line
+
+        std::istringstream stream( buff );
         std::string key, value;
 
         stream >> key >> value;
@@ -98,9 +134,14 @@ void network::read_network_config( const std::string& filename )
         else if ( key == "mac-address" && !string_to_addr( value, mac_addr.begin() ) ) {
             std::cerr << "Invalid MAC address format: " << value << '\n';
         }
+
+        memset( buff, sizeof( buff ), 0 );
+        buff_index = 0;
     }
 
-    file.close();
+    f_close( &file );
+    f_mount(NULL, "", 1);
+
 }
 
 
