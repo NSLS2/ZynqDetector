@@ -54,6 +54,12 @@ const device_t AD5254 = 0;
 const device_t AD5593 = 1;
 const device_t AD9249 = 2;
 
+
+#define NORMAL               0x0
+#define NETWORK_INIT_FAILURE 0x1
+#define NETWORK_TX_FAILURE   0x2
+#define NETWORK_RX_FAILURE   0x3
+
 typedef struct
 {
     device_t  device;
@@ -214,5 +220,10 @@ public:
 
     ZynqDetector();
     ~ZynqDetector();
+
+    void set_fail_num( uint32_t fail_num );
+
+    template <typename T>
+    void ZynqDetector::report_err( const std::string& s, T err_code, uint32_t fail_num );
 
 };

@@ -324,3 +324,17 @@ void ZynqDetector::udp_tx_task( void *pvParameters )
     }
 
 }
+
+
+// Write failure number to register.
+void ZynqDetector:set_fail_num( uint32_t failure_num )
+{
+    reg_wr( REG_DEVICE_STATUS, failure_num );
+}
+
+
+void ZynqDetector::report_err( const std::string& s, T err_code, uint32_t fail_num )
+{
+    std::cout << s << ". Error code " << err_code << '\n';
+    ZynqDetector::set_fail_num( fail_num );
+}
