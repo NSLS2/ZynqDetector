@@ -1,5 +1,6 @@
 #pragma once
 
+#include "zynqDetector.hpp"
 #include <cstdint>
 #include <array>
 
@@ -22,23 +23,49 @@ const uint8_t MSG_OP_SET_POLL_PERIOD = 2; // set polling period
 const uint8_t MSG_OP_ADD_TO_POLL = 3;     // add a register/device to polling list
 
 
-class network
+class Network
 {
 private:
+    ZynqDetector& detector;
+    
     uint8_t ip_addr[4];
     uint8_t netmask[4];
     uint8_t gateway[4];
     uint8_t dns[4];
     uint8_t mac_addr[6];
 
+    int32_t udp_socket;
+
     void read_network_config( const std::string& filename );
+    bool string_to_addr( const std::string& addr_str, uint8_t* addr );
 
 public:
-    network();
-    static void udp_rx( void *pvParameters );
-    static void udp_tx( void *pvParameters );
+    Network( ZynqDetector& detector ) : detector( detector ){}
 
-    int32_t udp_socket;
+    void udp_rx_task( void *pvParameters );
+    void udp_tx_task( void *pvParameters );
+
+    void report_error( const std::string& s, T err_code, uint32_t fail_num )
+    {
+        detector.report_error( s, err_code, fail_num );
+    }
+
+    static void udp_rx_task_wrapper( void* pvParameters )
+    {
+        Network* instance = std::static_cast<Network*>( pvParameters );
+        instance->udp_rx_task();
+    }
+
+    static void udp_tx_task_wrapper( void* pvParameters )
+    {
+        Network* instance = std::static_cast<Network*>( pvParameters );
+        instance->udp_tx_task();
+    }
+
+    static std::unique_ptr<Network> createInstance();
+    
+    
+    
 };
 
 typedef struct {
