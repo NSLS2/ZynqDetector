@@ -32,6 +32,7 @@ const uint8_t I2C_RD  { 5 };
 const uint8_t ASIC_WR { 6 };
 const uint8_t ASIC_RD { 7 };
 
+const uint16_t UDP_MSG_PREAMBLE = 0x5053;
 // Message coding
 typedef struct {
     uint16_t  preamble;
@@ -144,6 +145,11 @@ protected:
     static void slow_access_task( void *pvParameters );  // access asic/peripherals for small amount of data (slow)
     static void bulk_access_task( void *pvParameters );  // access asic/peripheral for bulk data (slowest)
 
+    // Access request processing.
+    virtual void fast_access_req_proc( const fast_access_req_t& fast_access_req ) = 0; // fast access request process
+    virtual void slow_access_req_proc( const fast_access_req_t& fast_access_req ) = 0; // slow access request process
+    virtual void bulk_access_req_proc( const fast_access_req_t& fast_access_req ) = 0; // bulk access request process
+
     // msg_id parsers
     void access_mode_decode( msg_id_t msg_id );
     reg_addr_t fast_access_parse( msg_id_t msg_id );
@@ -222,6 +228,11 @@ protected:
     virtual void queue_init();
 
     virtual void create_tasks();
+
+    // Network related
+    bool string_to_addr( const std::string& addr_str, uint8_t* addr );
+    void read_network_config( const std::string& filename );
+    void network_init();
 
 public:
 

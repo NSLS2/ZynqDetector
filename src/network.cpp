@@ -13,10 +13,11 @@
 #include "task.h"
 
 #include "network.hpp"
+#include "zynqDetector.hpp"
 
 //==============================================================
 
-bool string_to_addr( const std::string& addr_str, uint8_t* addr )
+bool ZynqDetector::string_to_addr( const std::string& addr_str, uint8_t* addr )
 {
     std::stringstream ss( addr_str );
 
@@ -67,10 +68,7 @@ bool string_to_addr( const std::string& addr_str, uint8_t* addr )
 
 //==============================================================
 
-
-
-
-void Network::read_network_config( const std::string& filename )
+void ZynqDetector::read_network_config( const std::string& filename )
 {
     FATFS fs;    // File system object
     FRESULT res; // Result code
@@ -147,6 +145,37 @@ void Network::read_network_config( const std::string& filename )
     f_mount(NULL, "", 1);
 }
 
+//==============================================================
+
+ZynqDetector::network_init()
+{
+    read_network_config( "config" );
+
+    struct freertos_sockaddr sock_addr;
+    sock_addr.sin_port = FreeRTOS_htons( 25913 );
+    sock_addr.sin_addr = FreeRTOS_inet_addr( ip_addr );
+
+    // Initialize the FreeRTOS+TCP stack
+    FreeRTOS_IPInit( ip_address, netmask, gateway, dns, mac_address );
+
+    // Create a UDP socket
+    int32_t socket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
+
+    if ( socket < 0 )
+    {
+        throw std::runtime_error( "Failed to create socket!" );
+        //std::cerr << "Failed to create socket (error )" << socket << '\n';
+    }
+
+    // Bind the socket to the UDP port
+    if ( FreeRTOS_bind( socket, &sock_addr, sizeof(sock_addr)) < 0 )
+    {
+        throw std::runtime_error( "Failed to bind the socket to the port!" );
+        //std::cerr << "Failed to bind the socket to the port (error )" << socket << '\n';
+    }
+}
+
+//==============================================================
 
 Network::Network( ZynqDetector& detector )
 {
@@ -195,7 +224,7 @@ static std::unique_ptr<Network> Network::createInstance()
     
 }
 
-void Network::udp_rx_task( void *pvParameters )
+void ZynqDetector::udp_rx_task( void *pvParameters )
 {
     uint16_t op;
     uint16_t obj;
@@ -220,16 +249,35 @@ void Network::udp_rx_task( void *pvParameters )
 
     while(1)
     {
-        lReceivedBytes = FreeRTOS_recvfrom( xSocket, ucReceiveBuffer, sizeof( ucReceiveBuffer ), 0, ( struct freertos_sockaddr * ) &xClientAddress, &xClientAddressLength );
+        uint16_t udp_msg_leng = FreeRTOS_recvfrom( xSocket,
+                                                   &udp_msg,
+                                                   sizeof( udp_msg ),
+                                                   0,
+                                                   ( struct freertos_sockaddr * ) &xClientAddress,
+                                                   &xClientAddressLength );
 
+        if ( (udp_msg_leng <= 0) || (udp_msg.preamble != UDP_MSG_PREAMBLE) )
+        {
+            // error report
+            continue;
+        }
+
+        rx_msg_proc( udp_msg );
+    }
+
+}
+
+void ZynqDetector::rx_msg_proc( udp_msg_t& msg )
+{
         // Read UDP packet
-        op = udp_msg.op >> 14;
-        uint16_t obj = udp_msg.msg_id & 0x3F;
+        op = msg.op >> 14;
+        uint16_t obj = msg.msg_id & 0x3F;
         switch( obj )
         {
             case MSG_VER:
                 // send a fast_req to fast_access_task
                 obj_type = FAST_ACCESS_REQ;
+                fast_access_req.
                 break;
             default:
                 ;
@@ -267,24 +315,31 @@ void Network::udp_tx_task( void *pvParameters )
 {
     while(1)
     {
-        active_resp_queue = ( resp_queue_set, portMAX_DELAY );
+        active_resp_queue = xQueueSelectFromSet( resp_queue_set, portMAX_DELAY );
 
         if ( active_resp_queue == fast_access_resp_queue )
         {
-            xQueueReceive( fast_access_resp_queue,				/* The queue being read. */
-			               Recdstring,	/* Data is read into this address. */
-                           portMAX_DELAY );	/* Wait without a timeout for data. */
+            xQueueReceive( fast_access_resp_queue,
+			               Recdstring,
+                           portMAX_DELAY );
+        }
+        else if ( active_resp_queue == slow_access_resp_queue )
+        {
+            xQueueReceive( slow_access_resp_queue,
+                           Recdstring,
+                           portMAX_DELAY );
+            slow_access_resp_process();
+        }
+        else if( active_resp_queue == bulk_access_resp_queue )
+        {
+            xQueueReceive( slow_access_resp_queue,
+		                   Recdstring,
+                           portMAX_DELAY );
+            bulk_resp_proc();
         }
         else
         {
-            if ( active_resp_queue == slow_access_resp_queue )
-            {
-
-            }
-            else // active_resp_queue == bulk_access_resp_queue
-            {
-                
-            }
+            // error
         }
 
     }

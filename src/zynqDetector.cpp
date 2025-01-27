@@ -59,18 +59,41 @@ void ZynqDetector::fast_access_task( void *pvParameters )
         xQueueReceive( 	(QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
 						&fast_access_req,	/* Data is read into this address. */
 						portMAX_DELAY );	/* Wait without a timeout for data. */
+        fast_access_req_proc( fast_access_req );
     }
+
 }
 
 void ZynqDetector::slow_access_task( void *pvParameters )
 {
-    active_slow_req_queue  = ( slow_req_queue_set, portMAX_DELAY );
+    QueueSetMemberHandle_t active_req_queue;
+    slow_access_req_t slow_access_req;
+    bulk_access_req_t bulk_access_req;
 
+    while(1)
+    {
+        active_slow_req_queue = ( slow_req_queue_set, portMAX_DELAY );
+        if ( active_slow_req_queue == slow_req_queue )
+        {
+            xQueueReceive( 	(QueueHandle_t*)slow_access_req_queue,
+						    &slow_access_req,
+						    portMAX_DELAY );
+            slow_access_req_proc( slow_access_req );
+        }
+
+        if ( active_slow_req_queue == bulk_req_queue )
+        {
+            xQueueReceive( 	(QueueHandle_t*)bulk_access_req_queue,
+						    &bulk_access_req,
+						    portMAX_DELAY );
+            bulk_access_req_proc( bulk_access_req );
+        }
+    }
 }
 
+// Maybe not necessary.
 void ZynqDetector::bulk_access_task( void *pvParameters )
 {
-
 }
 
 ZynqDetector::ZynqDetector( void )
@@ -157,8 +180,6 @@ static void poll_timer_callback( TimerHandle_t pxTimer )
     {}
 	
 }
-
-
 
 
 
