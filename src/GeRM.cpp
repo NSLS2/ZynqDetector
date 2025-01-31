@@ -324,3 +324,26 @@ void ZynqDetector::udp_tx_task( void *pvParameters )
     }
 
 }
+
+void GeRM::rx_msg_proc( udt_msg_t& udp_msg )
+{
+    op = udp_msg.op >> 14;
+    reg = udp_msg.op && 0x3F;
+
+    switch( op )
+    {
+        case WRITE_REG:
+            fast_access_req.op  = READ;
+            fast_access_req.reg = reg;
+            memcpy( fast_access_req.data, udp_msg.data, 4 );
+            break;
+        case READ_REG:
+            fast_access_req.op  = WRITE;
+            fast_access_req.reg = reg;
+            break;
+        case AD9252_CNFG:
+            break;
+        case READ_REG:
+            break;
+    }
+}
