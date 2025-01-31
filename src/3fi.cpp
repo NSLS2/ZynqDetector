@@ -190,15 +190,13 @@ void GeRM::rx_msg_proc( udt_msg_t& udp_msg )
     switch( op )
     {
         case SINGLE_READ_REQ:
-            fast_access_resp.op   = SINGLE_READ_RESP;
-            fast_access_resp.reg  = reg;
-            fast_access_resp.data = reg_rd( udp_msg.reg );
+            fast_access_req.op   = SINGLE_READ_RESP;
+            fast_access_req.reg  = reg;
+            fast_access_req.data = reg_rd( udp_msg.reg );
             
             break;
         case SINGLE_WRITE_REQ:
             reg_wr( reg, udp_msg.data );
-            fast_access_req.op  = SINGLE_WRITE_RESP;
-            fast_access_req.reg = reg;
             break;
         case SINGLE_READ_BLOCK_REQ:
             fast_access_resp.op   = SINGLE_READ_BLOCK_RESP;

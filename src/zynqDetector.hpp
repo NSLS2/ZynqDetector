@@ -36,10 +36,8 @@ const uint16_t UDP_MSG_PREAMBLE = 0x5053;
 // Message coding
 typedef struct {
     uint16_t  preamble;
-    uint16_t  msg_id;
-    uint8_t   msg_leng;
-    uint8_t   op;
-    uint32_t  addr;  // OP dependent, register address/I2C address/peripheral index/...
+    uint16_t  op;
+    uint32_t  payload[ MAX_UDP_MSG_LENG - 1 ];
 } udp_msg_t;
 
 const std::vector<msg_code> msg_codec

@@ -43,9 +43,7 @@ const uint16_t LKUPADDRREG       = ?;
 
 struct germ_udp_msg_t
 {
-    uint16_t op;
-    uint32_t data_leng;
-    uint32_t data[ (MAX_UDP_MSG_LENG - 6) / 4 ]
+    uint32_t data;
 };
 
 class GeRM: public ZynqDetector{
