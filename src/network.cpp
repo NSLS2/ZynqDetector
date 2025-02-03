@@ -176,7 +176,7 @@ ZynqDetector::network_init()
 }
 
 //==============================================================
-
+/*
 Network::Network( ZynqDetector& detector )
 {
     read_network_config( "config" );
@@ -205,42 +205,17 @@ Network::Network( ZynqDetector& detector )
     }
 
 }
-
-static std::unique_ptr<Network> Network::createInstance()
-{
-    try
-    {
-        return std::make_unique<Netowrk>();
-    }
-    catch ( const std::exception& e )
-    {
-        return nullptr;
-    }
-}
-
-
-~Network::Network()
-{
-    
-}
+*/
 
 void ZynqDetector::udp_rx_task( void *pvParameters )
 {
-    uint16_t op;
-    uint16_t obj;
     udp_msg_t udp_msg;
+    uint32_t udp_msg_leng;
+    
+    struct freertos_sockaddr src_sock_addr;
+    socklen_t src_addr_leng = sizeof(src_sock_addr);
 
-    uint8_t obj_type = 0;
-
-    fast_access_req_t fast_access_req;
-    slow_access_req_t slow_access_req;
-    bulk_access_req_t bulk_access_req;
-
-    Socket_t xUDPSocket;
-    struct freertos_sockaddr xSourceAddress;
-    socklen_t xSourceAddressLength = sizeof(xSourceAddress);
-    int32_t lBytesReceived;
-    uint8_t ucBuffer[MAX_UDP_MSG_LENG];
+    uint32_t remote_ip_addr, remote_ip_addr_tmp;
 
     //=============================
     // Initialize network
@@ -253,13 +228,21 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
                                                    &udp_msg,
                                                    sizeof( udp_msg ),
                                                    0,
-                                                   ( struct freertos_sockaddr * ) &xClientAddress,
-                                                   &xClientAddressLength );
+                                                   ( struct freertos_sockaddr * ) &src_sock_addr,
+                                                   &src_addr_leng );
 
-        if ( (udp_msg_leng <= 0) || (udp_msg.preamble != UDP_MSG_PREAMBLE) )
+        if ( (udp_msg_leng <= 0) || (udp_msg.id != UDP_MSG_ID) )
         {
             // error report
             continue;
+        }
+
+        remote_ip_addr_tmp != FreeRTOS_ntohl(src_addr.sin_addr);
+        if ( remote_ip_addr_tmp != remote_ip_addr )
+        {
+            // update server IP address
+            remote_ip_addr = remote_ip_addr_tmp;
+            
         }
 
         rx_msg_proc( udp_msg );
@@ -269,50 +252,80 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
 
 void ZynqDetector::rx_msg_proc( udp_msg_t& msg )
 {
-        // Read UDP packet
-        op = msg.op >> 14;
-        uint16_t obj = msg.msg_id & 0x3F;
-        switch( obj )
-        {
-            case MSG_VER:
-                // send a fast_req to fast_access_task
-                obj_type = FAST_ACCESS_REQ;
-                fast_access_req.
-                break;
-            default:
-                ;
-        }
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+    
+    switch( msg.op )
+    {
+        case FAST_ACCESS_REQ:
+            xQueueSend( fast_access_req_queue,
+         				fast_access_req,
+                        0UL );
+            break;
 
-        switch( obj_type )
-        {
-            case FAST_ACCESS_REQ:
-                xQueueSend( fast_access_req_queue,
-            				fast_access_req,
-                            0UL );
-                break;
+        case SLOW_ACCESS_REQ:
+            xQueueSend( slow_access_req_queue,
+        				slow_access_req,
+                        0UL );
+            break;
 
-            case SLOW_ACCESS_REQ:
-                xQueueSend( slow_access_req_queue,
-            				slow_access_req,
-                            0UL );
-                break;
+        case BULK_ACCESS_REQ:
+            xQueueSend( bulk_access_req_queue,
+        				bulk_access_req,
+                        0UL );
+            break;
 
-            case BULK_ACCESS_REQ:
-                xQueueSend( bulk_access_req_queue,
-            				bulk_access_req,
-                            0UL );
-                break;
-
-            default:
-                ;
-                
-        }
+        default:
+            ;
         
     }
 }
 
-void Network::udp_tx_task( void *pvParameters )
+void ZynqDetector::udp_tx_task( void *pvParameters )
 {
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+    
+    struct freertos_sockaddr dest_sock_addr;
+    socklen_t dest_sock_addr_leng = sizeof(xDestination);
+    int32_t bytesSent;
+
+    dest_sock_addr.sin_addr = FreeRTOS_inet_addr_quick( svr_ip_addr[3],
+                                                        svr_ip_addr[2],
+                                                        svr_ip_addr[1],
+                                                        svr_ip_addr[0] );
+    dest_sock_addr.sin_port = FreeRTOS_htons(UDP_PORT);
+
+    tx_msg_proc( dest_sock_addr, dest_sock_addr_leng );
+}
+
+void ZynqDetector::tx_msg_proc( const struct freertos_sockaddr dest_sock_addr&,
+                                const socklen_t dest_sock_addr_leng )
+{
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class MUST override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Override it in the derived class." );
+    //==================================================
+
+    fast_access_resp_t fast_access_resp;
+    slow_access_resp_t slow_access_resp;
+    bulk_access_resp_t bulk_access_resp;
+
+    udp_msg_t msg;
+    msg.id = UDP_MSG_ID;
+    uint32_t tx_leng;
+    uint32_t msg_leng;
+
     while(1)
     {
         active_resp_queue = xQueueSelectFromSet( resp_queue_set, portMAX_DELAY );
@@ -320,28 +333,46 @@ void Network::udp_tx_task( void *pvParameters )
         if ( active_resp_queue == fast_access_resp_queue )
         {
             xQueueReceive( fast_access_resp_queue,
-			               Recdstring,
+			               (void*)fast_access_resp,
                            portMAX_DELAY );
+            msg.op = fast_access_resp.op;
+            msg_leng = fast_access_resp.leng;
+            memcpy( &msg.data, fast_access_resp.data, msg_leng );
         }
         else if ( active_resp_queue == slow_access_resp_queue )
         {
             xQueueReceive( slow_access_resp_queue,
-                           Recdstring,
+                           (void*)slow_access_resp,
                            portMAX_DELAY );
-            slow_access_resp_process();
+            msg.op = slow_access_resp.op;
+            msg_leng = fast_access_resp.leng;
+            memcpy( &msg.data, slow_access_resp.data, msg_leng );
         }
         else if( active_resp_queue == bulk_access_resp_queue )
         {
-            xQueueReceive( slow_access_resp_queue,
-		                   Recdstring,
-                           portMAX_DELAY );
-            bulk_resp_proc();
+            xQueueReceive( bulk_access_resp_queue,
+		                   (void*)bulk_access_resp,
+                           bulk_access_resp );
+            msg.op = bulk_access_resp.op;
+            msg_leng = fast_access_resp.leng;
+            memcpy( &msg.data, bulk_access_resp.data, msg_leng );
         }
         else
         {
             // error
+            std::err << "Invalid message queue." << '\n';
+            continue;
         }
 
+        tx_leng = FreeRTOS_sendto( udp_socket,
+                                   msg,
+                                   msg_leng + 4, // ID (2) + OP (2) + data
+                                   0,
+                                   &dest_sock_addr,
+                                   dest_sock_addr_leng );
+        if ( tx_leng <= 0 )
+        {
+            std::err << "Failed to send UDP message.\n";
+        }
     }
-
 }

@@ -43,48 +43,22 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
-
-void ZynqDetector::fast_access_task( void *pvParameters )
+void GeRM::create_tasks()
 {
-    fast_access_req_t fast_access_req;
+	xTaskCreate( udp_rx_task,
+                 ( const char * ) "UDP_RX",
+				 configMINIMAL_STACK_SIZE,
+				 NULL,
+				 tskIDLE_PRIORITY,
+				 &udp_rx_task_handle );
 
-    while(1)
-    {
-        xQueueReceive( 	(QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
-						&fast_access_req,	/* Data is read into this address. */
-						portMAX_DELAY );	/* Wait without a timeout for data. */
-    }
+	xTaskCreate( udp_tx_task,
+				 ( const char * ) "UDP_TX",
+				 configMINIMAL_STACK_SIZE,
+				 NULL,
+				 tskIDLE_PRIORITY + 1,
+				 &udp_tx_task_handle );
 }
-
-void ZynqDetector::slow_access_task( void *pvParameters )
-{
-    active_slow_req_queue  = ( slow_req_queue_set, portMAX_DELAY );
-
-}
-
-void ZynqDetector::bulk_access_task( void *pvParameters )
-{
-
-}
-
-
-/*-----------------------------------------------------------*/
-static void poll_timer_callback( TimerHandle_t pxTimer )
-{
-	long lTimerId;
-	configASSERT( pxTimer );
-
-	lTimerId = ( long ) pvTimerGetTimerID( pxTimer );
-
-	if (lTimerId != TIMER_ID) {
-		xil_printf("FreeRTOS Hello World Example FAILED");
-	}
-
-    if( std::size(poll_list) != 0 )
-    {}
-	
-}
-
 
 
 void ZynqDetector::udp_rx_task( void *pvParameters )
@@ -111,7 +85,6 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
     xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
 
 
-
     while(1)
     {
         lReceivedBytes = FreeRTOS_recvfrom( xSocket, ucReceiveBuffer, sizeof( ucReceiveBuffer ), 0, ( struct freertos_sockaddr * ) &xClientAddress, &xClientAddressLength );
@@ -129,63 +102,19 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
                 ;
         }
 
-        switch( obj_type )
-        {
-            case SINGLE_READ_REQ:
-                xQueueSend( fast_access_req_queue,
-            				fast_access_req,
-                            0UL );
-                break;
-
-            case SINGLE_WRITE_REQ:
-                xQueueSend( slow_access_req_queue,
-            				slow_access_req,
-                            0UL );
-                break;
-
-            case SINGLE_READ_BLOCK_REQ:
-                xQueueSend( bulk_access_req_queue,
-            				bulk_access_req,
-                            0UL );
-                break;
-
-            default:
-                ;
-                
-        }
+        rx_msg_proc( udp_msg );
         
     }
 }
 
-void ZynqDetector::udp_tx_task( void *pvParameters )
-{
-    while(1)
-    {
-        active_resp_queue = ( resp_queue_set, portMAX_DELAY );
 
-        if ( active_resp_queue == fast_access_resp_queue )
-        {
-
-        }
-        else
-        {
-            if ( active_resp_queue == slow_access_resp_queue )
-            {
-
-            }
-            else // active_resp_queue == bulk_access_resp_queue
-            {
-                
-            }
-        }
-    }
-
-}
 
 void GeRM::rx_msg_proc( udt_msg_t& udp_msg )
 {
     op = udp_msg.op >> 14;
     reg = udp_msg.op && 0x3F;
+
+    fast_access_resp_t fast_access_resq;
 
     switch( op )
     {
@@ -193,19 +122,29 @@ void GeRM::rx_msg_proc( udt_msg_t& udp_msg )
             fast_access_resp.op   = SINGLE_READ_RESP;
             fast_access_resp.reg  = reg;
             fast_access_resp.data = reg_rd( udp_msg.reg );
-            
             break;
+
         case SINGLE_WRITE_REQ:
             reg_wr( reg, udp_msg.data );
             fast_access_req.op  = SINGLE_WRITE_RESP;
             fast_access_req.reg = reg;
             break;
+
         case SINGLE_READ_BLOCK_REQ:
             fast_access_resp.op   = SINGLE_READ_BLOCK_RESP;
             fast_access_resp.reg  = reg;
             fast_access_resp.data = reg_rd( udp_msg.reg );
             break;
-        case READ_REG:
+
+        default:
+            std::cout << "Unexpected operation request (" << op << ').';
             break;
     }
+}
+
+void GeRM::tx_msg_proc( )
+{
+    xQueueReceive( fast_access_resp_queue,
+    			   Recdstring,
+                   portMAX_DELAY );
 }

@@ -182,7 +182,6 @@ static void poll_timer_callback( TimerHandle_t pxTimer )
 }
 
 
-
 // Write failure number to register.
 void ZynqDetector:set_fail_num( uint32_t failure_num )
 {
@@ -199,6 +198,14 @@ void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail
 
 void ZynqDetector::queue_init()
 {
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+
+    // Create queues        
 	fast_access_req_queue  = xQueueCreate( 100, sizeof( fast_access_req_t ) );
 	slow_access_req_queue  = xQueueCreate( 100, sizeof( slow_access_req_t ) );
     bulk_access_req_queue  = xQueueCreate( 4,   sizeof( bulk_access_req_t ) );
@@ -226,6 +233,13 @@ void ZynqDetector::queue_init()
 
 void ZynqDetector:create_tasks()
 {
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+
 	xTaskCreate( udp_rx_task, 				 // The function that implements the task.
                  ( const char * ) "UDP_RX",  // Text name for the task, provided to assist debugging only.
 				 configMINIMAL_STACK_SIZE,   // The stack allocated to the task.

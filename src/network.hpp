@@ -11,7 +11,7 @@ const uint16_t MAX_UDP_MSG_LENG = 4096;
 const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
 
 typedef struct {
-    uint16_t hdr;
+    uint16_t id;
     uint16_t op;
     uint32_t msg_data[MAX_UDP_MSG_DATA_LENG];
 } udp_msg_t;
@@ -28,11 +28,16 @@ class Network
 private:
     ZynqDetector& detector;
     
+    const uint32_t UDP_PORT = 25913;
+
     uint8_t ip_addr[4];
     uint8_t netmask[4];
     uint8_t gateway[4];
     uint8_t dns[4];
     uint8_t mac_addr[6];
+
+    std::atomic<bool> svr_ip_addr_lock {false};
+    uint8_t svr_ip_addr[4];
 
     int32_t udp_socket;
 

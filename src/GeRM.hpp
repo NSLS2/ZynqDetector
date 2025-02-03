@@ -47,8 +47,11 @@ struct germ_udp_msg_t
 };
 
 class GeRM: public ZynqDetector{
-protected:
+private:
+    void greate_tasks();
+    
     void rx_msg_proc( udt_msg_t udp_msg );
+    void tx_msg_proc();
     
 public:
     
