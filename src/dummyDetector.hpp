@@ -50,7 +50,7 @@ typedef struct
     uint8_t   addr;
 } device_descriptor_t;
 
-// device interface descriptor. Used for interface access in slow_access_task
+// device interface descriptor. Used for interface access in i2c0_access_task
 typedef struct
 {
     uint8_t if_type; // interface type: I2C, SPI, etc
@@ -80,64 +80,43 @@ protected:
         uint8_t  op;
         uint32_t addr;
         uint32_t data;
-    } fast_access_req_t;
+    } reg_access_req_t;
 
     typedef struct
     {
         uint8_t  op;
         uint8_t  device;
         uint16_t addr;
-    } slow_access_req_t;
+    } i2c_access_req_t;
 
-    typedef struct
-    {
-        uint32_t op;
-        uint32_t leng;
-        uint32_t cfg_data[4096/4 - 1];
-    } bulk_access_req_t;
-
-    typedef struct
-    {
-        uint8_t  op;
-        uint16_t leng;
-        uint8_t  device;
-        uint16_t addr;
-    } slow_access_resp_t;
-
-    typedef struct
-    {
-        uint32_t op;
-        uint32_t leng;
-        uint32_t cfg_data[4096/4 - 1];
-    } bulk_access_resp_t;
 
     // Parameters to be passed to the tasks
     typedef struct
     {
-        QueueHandle_t fast_access_req_queue;
-        QueueHandle_t slow_access_req_queue;
+        QueueHandle_t reg_access_req_queue;
+        QueueHandle_t i2c0_access_req_queue;
         QueueHandle_t bulk_access_req_queue;
     } udp_rx_task_ingress_param;
 
     typedef struct 
     {
-        QueueHandle_t fast_access_req_queue;
-        QueueHandle_t fast_access_resp_queue;
-    } fast_access_task_ingress_param;
+        QueueHandle_t reg_access_req_queue;
+        QueueHandle_t reg_access_resp_queue;
+    } reg_access_task_ingress_param;
 
     typedef struct
     {
-        QueueHandle_t    slow_access_req_queue;
+        QueueHandle_t    i2c0_access_req_queue;
         QueueHandle_t    bulk_access_req_queue;
         QueueSetHandle_t slow_req_queue_set;
-        QueueHandle_t    slow_access_resp_queue;
+        QueueHandle_t    i2c0_access_resp_queue;
         QueueHandle_t    bulk_access_resp_queue;        
-    } slow_access_task_ingress_param;
+    } i2c0_access_task_ingress_param;
 
     typedef struct
     {
-        QueueHandle_t    fast_access_resp_queue;
-        QueueHandle_t    slow_access_resp_queue;
+        QueueHandle_t    reg_access_resp_queue;
+        QueueHandle_t    i2c0_access_resp_queue;
         QueueHandle_t    bulk_access_resp_queue;
         QueueSetHandle_t resp_queue_set;
     } udp_tx_task_ingress_param;
@@ -146,22 +125,16 @@ protected:
     //======================================
     // Queues
     //======================================
-    const uint16_t FAST_ACCESS_REQ_QUEUE_LENG  = 100;
-    const uint16_t SLOW_ACCESS_REQ_QUEUE_LENG  = 100;
-    const uint16_t BULK_ACCESS_REQ_QUEUE_LENG  = 4;
-    const uint16_t SLOW_ACCESS_RESP_QUEUE_LENG = 100;
-    const uint16_t BULK_ACCESS_RESP_QUEUE_LENG = 4;
+    const uint16_t REG_ACCESS_REQ_QUEUE_LENG  = 100;
+    const uint16_t I2C0_ACCESS_REQ_QUEUE_LENG = 100;
 
-    const uint16_t FAST_ACCESS_REQ_QUEUE_SIZE  = FAST_ACCESS_REQ_QUEUE_LENG  * sizeof(fast_access_req_t);
-    const uint16_t SLOW_ACCESS_REQ_QUEUE_SIZE  = SLOW_ACCESS_REQ_QUEUE_LENG  * sizeof(slow_access_req_t);
-    const uint16_t BULK_ACCESS_REQ_QUEUE_SIZE  = SLOW_ACCESS_REQ_QUEUE_LENG  * sizeof(bulk_access_req_t);
-    const uint16_t SLOW_ACCESS_RESP_QUEUE_SIZE = SLOW_ACCESS_RESP_QUEUE_LENG * sizeof(slow_access_resp_t);
-    const uint16_t BULK_ACCESS_RESP_QUEUE_SIZE = SLOW_ACCESS_RESP_QUEUE_LENG * sizeof(bulk_access_resp_t);
+    const uint16_t REG_ACCESS_REQ_QUEUE_SIZE  = REG_ACCESS_REQ_QUEUE_LENG  * sizeof(reg_access_req_t);
+    const uint16_t I2C0_ACCESS_REQ_QUEUE_SIZE = I2C0_ACCESS_REQ_QUEUE_LENG  * sizeof(i2c_access_req_t);
 
-    QueueHandle_t fast_access_req_queue  = NULL;
-    QueueHandle_t slow_access_req_queue  = NULL;
+    QueueHandle_t reg_access_req_queue  = NULL;
+    QueueHandle_t i2c0_access_req_queue  = NULL;
     QueueHandle_t bulk_access_req_queue  = NULL;
-    QueueHandle_t slow_access_resp_queue = NULL;
+    QueueHandle_t i2c0_access_resp_queue = NULL;
     QueueHandle_t bulk_access_resp_queue = NULL;
 
     QueueSetHandle_t slow_req_queue_set;
@@ -170,19 +143,19 @@ protected:
     //======================================
     // Tasks
     //======================================
-    static void fast_access_task( void *pvParameters );  // access registers directly (fast)
-    static void slow_access_task( void *pvParameters );  // access asic/peripherals for small amount of data (slow)
+    static void reg_access_task( void *pvParameters );  // access registers directly (fast)
+    static void i2c0_access_task( void *pvParameters );  // access asic/peripherals for small amount of data (slow)
     static void bulk_access_task( void *pvParameters );  // access asic/peripheral for bulk data (slowest)
 
-    TaskHandle_t  fast_access_task_handle;
-    TaskHandle_t  slow_access_task_handle;
+    TaskHandle_t  reg_access_task_handle;
+    TaskHandle_t  i2c0_access_task_handle;
 
     //======================================
     // Access request processing
     //======================================
-    virtual void fast_access_req_proc( const fast_access_req_t& fast_access_req ) = 0; // fast access request process
-    virtual void slow_access_req_proc( const fast_access_req_t& fast_access_req ) = 0; // slow access request process
-    virtual void bulk_access_req_proc( const fast_access_req_t& fast_access_req ) = 0; // bulk access request process
+    virtual void reg_access_req_proc( const reg_access_req_t& reg_access_req ) = 0; // fast access request process
+    virtual void i2c0_access_req_proc( const reg_access_req_t& reg_access_req ) = 0; // slow access request process
+    virtual void bulk_access_req_proc( const reg_access_req_t& reg_access_req ) = 0; // bulk access request process
 
     //======================================
     // ISR

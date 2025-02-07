@@ -50,16 +50,24 @@ static StaticQueue_t xStaticQueue;
 #endif
 
 
-void ZynqDetector::fast_access_task( void *pvParameters )
+void ZynqDetector::reg_access_task( void *pvParameters )
 {
-    fast_access_req_t fast_access_req;
+    reg_access_req_t  reg_access_req;
+    reg_access_resp_t reg_access_resp;
 
     while(1)
     {
         xQueueReceive( 	(QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
 						&fast_access_req,	/* Data is read into this address. */
 						portMAX_DELAY );	/* Wait without a timeout for data. */
-        fast_access_req_proc( fast_access_req );
+        
+        if ( reg_access_req.read )
+        {
+            reg_access_resp.op = reg_access_req.op;
+            reg_access_resp.data = reg_rd ( reg_access_req_addr );
+            xQueueSend( (QueueHandle_t*)reg_access_resp_queue,
+                        )
+        }
     }
 
 }

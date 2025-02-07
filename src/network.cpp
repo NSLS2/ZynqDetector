@@ -318,8 +318,8 @@ void ZynqDetector::tx_msg_proc( const struct freertos_sockaddr dest_sock_addr&,
     //==================================================
 
     fast_access_resp_t fast_access_resp;
-    slow_access_resp_t slow_access_resp;
-    bulk_access_resp_t bulk_access_resp;
+    i2c_access_resp_t  i2c0_access_resp;
+    spi_access_resp_t  spi0_access_resp;
 
     udp_msg_t msg;
     msg.id = UDP_MSG_ID;
