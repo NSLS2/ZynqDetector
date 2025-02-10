@@ -92,39 +92,87 @@ private:
 
     axi_reg reg;
 
+    //==============================
     // Data types
+    //------------------------------
+    // Access request
+    //------------------------------
     typedef struct
     {
         uint8_t  op;
+        bool     read;
         uint32_t addr;
-    } fast_access_req_t;
+        uint32_t data;
+    } reg_access_req_t;
 
     typedef struct
     {
         uint8_t  op;
-        uint8_t  device;
-        uint16_t addr;
-    } slow_access_req_t;
+        bool     read;
+        uint8_t  device_addr;
+        uint16_t instr_reg_addr;
+        uint16_t data_reg_addr;
+        uint32_t data;
+    } interface_single_access_req_t;
 
     typedef struct
     {
         uint32_t op;
+        bool     read;
         uint32_t leng;
-        uint32_t cfg_data[4096/4 - 1];
-    } bulk_access_req_t;
+        uint8_t  device_addr;
+        uint16_t instr_reg_addr;
+        uint16_t data_reg_addr;
+        uint32_t data[4096/4 - 1];
+    } interface_multi_access_req_t;
 
+    //------------------------------
+    // Access response
+    //------------------------------
     typedef struct
     {
         uint8_t  op;
         uint32_t addr;
-    } fast_access_resp_t;
+    } reg_access_resp_t;
 
     typedef struct
     {
+        uint8_t   op;
+        uint32_t  data;
+    } interface_single_access_resp_t;
+    
+    typedef struct
+    {
         uint8_t  op;
-        uint8_t  device;
-        uint16_t addr;
-    } slow_access_resp_t;
+        uint32_t leng;
+        uint32_t data[4096/4 - 1];
+    } interface_multi_access_resp_t;
+
+    //------------------------------
+    // Task parameter
+    //------------------------------
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+    } reg_access_task_param_t;
+
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+        void* read();
+        void* write();
+    } interface_single_access_task_param_t;
+
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+        void* read();
+        void* write();
+    } interface_multi_access_task_param_t;
+
 
     typedef struct
     {

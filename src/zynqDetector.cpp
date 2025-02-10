@@ -49,60 +49,110 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
-
+// This task performs single register read/write operation.
 void ZynqDetector::reg_access_task( void *pvParameters )
 {
-    reg_access_req_t  reg_access_req;
-    reg_access_resp_t reg_access_resp;
+    reg_access_req_t  req;
+    reg_access_resp_t resp;
+
+    auto param = static_cast<reg_access_task_param_t*>(pvParameters);
 
     while(1)
     {
-        xQueueReceive( 	(QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
-						&fast_access_req,	/* Data is read into this address. */
-						portMAX_DELAY );	/* Wait without a timeout for data. */
+        xQueueReceive( 	static_cast<(QueueHandle_t*>(pvParameters),
+						&req,
+						portMAX_DELAY );
         
-        if ( reg_access_req.read )
+        if ( req.read )
         {
-            reg_access_resp.op = reg_access_req.op;
-            reg_access_resp.data = reg_rd ( reg_access_req_addr );
-            xQueueSend( (QueueHandle_t*)reg_access_resp_queue,
+            resp.op = req.op;
+            resp.data = reg_rd ( req );
+            xQueueSend( (QueueHandle_t*)resp,
                         )
         }
+        else
+        {
+            reg_wr( req.addr, req.data );
+        }
     }
-
 }
 
-void ZynqDetector::slow_access_task( void *pvParameters )
+// This task performs single register read/write operation.
+void ZynqDetector::interface_single_access_task( void *pvParameters )
 {
-    QueueSetMemberHandle_t active_req_queue;
-    slow_access_req_t slow_access_req;
-    bulk_access_req_t bulk_access_req;
+    interface_single_access_req_t  req;
+    interface_single_access_resp_t resp;
+
+    auto param = static_cast<interface_single_access_task_param*>(pvParameters);
 
     while(1)
     {
-        active_slow_req_queue = ( slow_req_queue_set, portMAX_DELAY );
-        if ( active_slow_req_queue == slow_req_queue )
+        xQueueReceive( 	static_cast<QueueHandle_t*>(param).req_queue,
+						&req,
+						portMAX_DELAY );
+        
+        if ( req.read )
         {
-            xQueueReceive( 	(QueueHandle_t*)slow_access_req_queue,
-						    &slow_access_req,
-						    portMAX_DELAY );
-            slow_access_req_proc( slow_access_req );
-        }
+            interface_read( req.device_addr, req.data );
+            resp.op = req.op;
 
-        if ( active_slow_req_queue == bulk_req_queue )
-        {
-            xQueueReceive( 	(QueueHandle_t*)bulk_access_req_queue,
-						    &bulk_access_req,
-						    portMAX_DELAY );
-            bulk_access_req_proc( bulk_access_req );
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            resp.data = reg.rd( req.addr );
+
+            xQueueSend( static_cast<QueueHandle_t*>(param).resp_queue,
+                        static_cast<const void*>(resp),
+                        portMAX_DELAY );
         }
     }
 }
 
-// Maybe not necessary.
-void ZynqDetector::bulk_access_task( void *pvParameters )
+
+// This task processes requests that need to continuously access a device
+// multiple times, e.g., to configure a device through an I2C bus while
+// the configuration data consists of multiple dwords.
+void ZynqDetector::interface_multi_access_task( void *pvParameters )
 {
+    interface_multi_access_req_t  req;
+    interface_multi_access_resp_t resp;
+
+    while(1)
+    {
+        xQueueReceive( 	static_cast<QueueHandle_t*>(param).req_queue,
+						&req,
+                        portMAX_DELAY );
+
+        // compose the instruction queue
+        
+        for ( int i=0; !instr_queue.empty(); ++i )
+        {
+            auto instr = instr_queue.front();
+            instr_queue.pop();
+            if ( instr.read )
+            {
+                read( instr.device_addr, instr.reg_addr );
+            else
+            {
+                write( instr.device_addr, instr.reg_addr, instr.data );
+            }
+
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            if ( instr.read )
+            {
+                resp.data[i] = reg.rd( req.addr );
+            }
+        }
+
+        if( req.read )
+        {
+            resp.op = req.op;
+            
+            xQueueSend( static_cast<QueueHandle_t*>(param).resp_queue,
+                        static_cast<const void*>(resp),
+                        portMAX_DELAY );
+        }
+    }
 }
+
 
 ZynqDetector::ZynqDetector( void )
 {
