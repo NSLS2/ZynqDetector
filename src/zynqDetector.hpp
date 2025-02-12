@@ -105,6 +105,13 @@ protected:
     //------------------------------
     typedef struct
     {
+        QueueHandle_t* reg_access_req_queue;
+        QueueHandle_t* interface_single_access_req_queue;
+        QueueHandle_t* interface_multi_access_req_queue;
+    } udp_rx_task_param_t;
+
+    typedef struct
+    {
         QueueHandle_t* req_queue;
         QueueHandle_t* resp_queue;
     } reg_access_task_param_t;
