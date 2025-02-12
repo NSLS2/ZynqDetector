@@ -49,7 +49,10 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
+
+//===============================================================
 // This task performs single register read/write operation.
+//===============================================================
 void ZynqDetector::reg_access_task( void *pvParameters )
 {
     reg_access_req_t  req;
@@ -76,8 +79,12 @@ void ZynqDetector::reg_access_task( void *pvParameters )
         }
     }
 }
+//===============================================================
 
+
+//===============================================================
 // This task performs single register read/write operation.
+//===============================================================
 void ZynqDetector::interface_single_access_task( void *pvParameters )
 {
     interface_single_access_req_t  req;
@@ -105,11 +112,14 @@ void ZynqDetector::interface_single_access_task( void *pvParameters )
         }
     }
 }
+//===============================================================
 
-
-// This task processes requests that need to continuously access a device
-// multiple times, e.g., to configure a device through an I2C bus while
-// the configuration data consists of multiple dwords.
+//===============================================================
+// This task processes requests that need to continuously 
+// access a device multiple times, e.g., to configure a device
+// through an I2C bus while the configuration data consists of
+// multiple dwords.
+//===============================================================
 void ZynqDetector::interface_multi_access_task( void *pvParameters )
 {
     interface_multi_access_req_t  req;
@@ -152,8 +162,11 @@ void ZynqDetector::interface_multi_access_task( void *pvParameters )
         }
     }
 }
+//===============================================================
 
 
+//===============================================================
+//===============================================================
 ZynqDetector::ZynqDetector( void )
 {
 	const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
@@ -186,6 +199,7 @@ ZynqDetector::ZynqDetector( void )
 
 	for( ;; );
 }
+//===============================================================
 
 
 /*-----------------------------------------------------------*/
@@ -240,20 +254,26 @@ static void poll_timer_callback( TimerHandle_t pxTimer )
 }
 
 
+//===============================================================
 // Write failure number to register.
+//===============================================================
 void ZynqDetector:set_fail_num( uint32_t failure_num )
 {
     reg_wr( REG_DEVICE_STATUS, failure_num );
 }
 
 
+//===============================================================
 void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail_num )
 {
     std::cout << s << ". Error code " << err_code << '\n';
     ZynqDetector::set_fail_num( fail_num );
 }
+//===============================================================
 
 
+//===============================================================
+//===============================================================
 void ZynqDetector::queue_init()
 {
     //==================================================
@@ -264,32 +284,28 @@ void ZynqDetector::queue_init()
     //==================================================
 
     // Create queues        
-	fast_access_req_queue  = xQueueCreate( 100, sizeof( fast_access_req_t ) );
-	slow_access_req_queue  = xQueueCreate( 100, sizeof( slow_access_req_t ) );
-    bulk_access_req_queue  = xQueueCreate( 4,   sizeof( bulk_access_req_t ) );
-	fast_access_resp_queue = xQueueCreate( 100, sizeof( fast_access_resp_t ) );
-	slow_access_resp_queue = xQueueCreate( 100, sizeof( slow_access_resp_t ) );
-    bulk_access_resp_queue = xQueueCreate( 4,   sizeof( bulk_access_resp_t ) );
+	reg_access_req_queue               = xQueueCreate( 100, sizeof( reg_access_req_t ) );
+	interface_single_access_req_queue  = xQueueCreate( 100, sizeof( interface_single_access_req_t ) );
+    interface_multi_access_req_queue   = xQueueCreate( 4,   sizeof( interface_multi_access_req_t ) );
+	reg_access_resp_queue              = xQueueCreate( 100, sizeof( reg_access_resp_t ) );
+	interface_single_access_resp_queue = xQueueCreate( 100, sizeof( interface_single_access_resp_t ) );
+    interface_multi_access_resp_queue  = xQueueCreate( 4,   sizeof( interface_multi_access_resp_t ) );
 
     // Create queue sets
-    slow_req_queue_set  = xQueueCreateSet(
-        SLOW_ACCESS_REQ_QUEUE_SIZE +
-        BULK_ACCESS_REQ_QUEUE_SIZE );
-
-    xQueueAddToSet( slow_access_req_queue, slow_req_queue_set );
-    xQueueAddToSet( bulk_access_req_queue, slow_req_queue_set );
-
     resp_queue_set = xQueueCreateSet( 
-        FAST_ACCESS_RESP_QUEUE_SIZE +
-        SLOW_ACCESS_RESP_QUEUE_SIZE +
-        BULK_ACCESS_RESP_QUEUE_SIZE );
+        REG_ACCESS_RESP_QUEUE_SIZE +
+        INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE +
+        INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE );
 
-    xQueueAddToSet( fast_access_resp_queue, resp_queue_set );
-    xQueueAddToSet( slow_access_resp_queue, resp_queue_set );
-    xQueueAddToSet( bulk_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( reg_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( interface_single_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( interface_multi_access_resp_queue, resp_queue_set );
 }
 
-void ZynqDetector:create_tasks()
+
+//===============================================================
+//===============================================================
+void ZynqDetector:task_init()
 {
     //==================================================
     // This function definition is for reference only.
@@ -312,17 +328,290 @@ void ZynqDetector:create_tasks()
 				 tskIDLE_PRIORITY + 1,
 				 &udp_tx_task_handle );
 
-	xTaskCreate( fast_access_task,
-				 ( const char * ) "FAST_ACCESS",
+	xTaskCreate( reg_access_task,
+				 ( const char * ) "REG_ACCESS",
 				 configMINIMAL_STACK_SIZE,
 				 NULL,
 				 tskIDLE_PRIORITY + 1,
-				 &fast_access_task_handle );
+				 &reg_access_task_handle );
 
-	xTaskCreate( slow_access_task,
+    xTaskCreate( interface_signle_access_task,
+                 ( const char * ) "SLOW_ACCESS",
+                 configMINIMAL_STACK_SIZE,
+                 NULL,
+                 tskIDLE_PRIORITY + 1,
+                 &interface_single_access_task_handle );
+
+	xTaskCreate( interface_multi_access_task,
 				 ( const char * ) "SLOW_ACCESS",
 				 configMINIMAL_STACK_SIZE,
 				 NULL,
 				 tskIDLE_PRIORITY + 1,
-				 &slow_access_task_handle );
+				 &interface_multi_access_task_handle );
 }
+//===============================================================
+
+
+
+//===============================================================
+// UDP receive task.
+//===============================================================
+void ZynqDetector::udp_rx_task( void *pvParameters )
+{
+    udp_req_msg_t msg;
+    uint32_t msg_leng;
+    
+    struct freertos_sockaddr src_sock_addr;
+    socklen_t src_addr_leng = sizeof(src_sock_addr);
+
+    uint32_t remote_ip_addr, remote_ip_addr_tmp;
+
+    //=============================
+    // Initialize network
+    //=============================
+    xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
+
+    while(1)
+    {
+        uint16_t msg_leng = FreeRTOS_recvfrom( xSocket,
+                                               &msg,
+                                               sizeof( msg ),
+                                               0,
+                                               ( struct freertos_sockaddr * ) &src_sock_addr,
+                                               &src_addr_leng );
+
+        if ( (msg_leng <= 0) || (msg.id != UDP_MSG_ID) )
+        {
+            // error report
+            continue;
+        }
+
+        remote_ip_addr_tmp = FreeRTOS_ntohl(src_addr.sin_addr);
+        if ( remote_ip_addr_tmp != remote_ip_addr )
+        {
+            // update server IP address
+            remote_ip_addr = remote_ip_addr_tmp;
+            
+        }
+
+        rx_msg_proc( msg );
+    }
+
+}
+//===============================================================
+
+
+//===============================================================
+// UDP transmit task.
+//===============================================================
+void ZynqDetector::udp_tx_task( void *pvParameters )
+{
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+    
+    struct freertos_sockaddr dest_sock_addr;
+    socklen_t dest_sock_addr_leng = sizeof(xDestination);
+    int32_t bytesSent;
+
+    dest_sock_addr.sin_addr = FreeRTOS_inet_addr_quick( svr_ip_addr[3],
+                                                        svr_ip_addr[2],
+                                                        svr_ip_addr[1],
+                                                        svr_ip_addr[0] );
+    dest_sock_addr.sin_port = FreeRTOS_htons(UDP_PORT);
+
+    udp_tx_msg_t msg;
+    
+    while(1)
+    {
+        tx_msg_proc( msg );
+        tx_leng = FreeRTOS_sendto( udp_socket,
+                                   msg,
+                                   msg.leng + 4, // ID (2) + OP (2) + data
+                                   0,
+                                   &dest_sock_addr,
+                                   dest_sock_addr_leng );
+        if ( tx_leng <= 0 )
+        {
+            std::err << "Failed to send UDP message.\n";
+        }
+    }
+}
+//===============================================================
+
+
+
+//===============================================================
+// Convert a string to an IP/MAC address.
+//===============================================================
+bool ZynqDetector::string_to_addr( const std::string& addr_str, uint8_t* addr )
+{
+    std::stringstream ss( addr_str );
+
+    bool is_ip = ( addr_str.find( '.' ) != std::string::npos );
+    auto separator = is_ip ? '.' : ':';
+    auto num_separator = std::count( addr_str.begin(), addr_str.end(), separator );
+    if ( ( is_ip && num_separator != 3 ) || ( !is_ip && num_separator != 5 ) )
+    {
+        std::cerr << "Wrong address string format" << addr_str << '\n';
+        return false;
+    }
+
+    std::string segment;
+
+    int i = 0;
+
+    while ( std::getline ( ss, segment, separator ) )
+    {
+        int byte = 0;
+        if ( is_ip )
+        {
+            if ( std::stringstream( segment ) >> byte )
+            {
+                if (byte < 0 || byte > 255) return false;  // Invalid byte value
+            }
+            else
+            {
+                return false;  // Invalid segment
+            }
+        }
+        else
+        {
+            try
+            {
+                byte = std::stoi( segment, nullptr, 16 );
+                if (byte < 0 || byte > 255) return false;  
+            }
+            catch ( const std::invalid_argument& )
+            {
+                return false;  // Invalid hex segment
+            }            
+        }
+        *(addr++) = static_cast<uint8_t>( byte );
+    }
+
+    return true;
+}
+
+//===============================================================
+// Read network parameters from file:
+// - IP address
+// - Netmask
+// - Gateway
+// - DNS server
+// - MAC address
+//===============================================================
+
+void ZynqDetector::read_network_config( const std::string& filename )
+{
+    FATFS fs;    // File system object
+    FRESULT res; // Result code
+    FIL file;
+    UINT br;
+
+    char buff[50];
+    int buff_index = 0;
+    
+    res = f_mount(&fs, "", 1); // Mount the default drive
+    if (res != FR_OK)
+    {
+        throw std::runtime_error( "Failed to mount SD card" );
+    }
+
+    res = f_open(&file, "filename.txt", FA_READ | FA_WRITE);
+    if (res != FR_OK)
+    {
+        throw std::runtime_error( "Failed to open config file" );
+    }
+
+
+    std::ifstream file( filename );
+    if ( !file.is_open() )
+    {
+        throw std::runtime_error( "Failed to open config file" );
+        std::cerr << "Error: could not open " << filename << "!\n";
+        return;
+    }
+
+    std::string line;
+
+    //while( std::getline(file, line) )
+    while (f_read(&file, &buff[buff_index], 1, &br) == FR_OK && br > 0)
+    {
+        if ( buff[buff_index] != '\n' && buff[buff_index] != '\r')
+        {
+            ++buff_index;
+            continue;
+        }
+        
+        buff[buff_index] = '\0'; // Null-terminate the line
+
+        std::istringstream stream( buff );
+        std::string key, value;
+
+        stream >> key >> value;
+        if ( key == "ip-address" && !string_to_addr(value, ip_addr.begin() ) )
+        {
+            throw NetException( "Invalid IP address format", value );
+        }
+        else if ( key == "netmask" && !string_to_addr( value, netmask.begin() ) )
+        {
+            throw NetException( "Invalid netmask format", value );
+        }
+        else if ( key == "gateway" && !string_to_addr( value, gateway.begin() ) )
+        {
+            throw NetException( "Invalid gateway format", value );
+        }
+        else if ( key == "dns" && !string_to_addr( value, dns.begin() ))
+        {
+            throw NetException( "Invalid DNS format", value );
+        }
+        else if ( key == "mac-address" && !string_to_addr( value, mac_addr.begin() ) )
+        {
+            throw NetException( "Invalid MAC address format", value );
+        }
+
+        memset( buff, sizeof( buff ), 0 );
+        buff_index = 0;
+    }
+
+    f_close( &file );
+    f_mount(NULL, "", 1);
+}
+//===============================================================
+
+
+//===============================================================
+// Network initialization.
+//===============================================================
+ZynqDetector::network_init()
+{
+    read_network_config( "config" );
+
+    struct freertos_sockaddr sock_addr;
+    sock_addr.sin_port = FreeRTOS_htons( 25913 );
+    sock_addr.sin_addr = FreeRTOS_inet_addr( ip_addr );
+
+    // Initialize the FreeRTOS+TCP stack
+    FreeRTOS_IPInit( ip_address, netmask, gateway, dns, mac_address );
+
+    // Create a UDP socket
+    int32_t socket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
+
+    if ( socket < 0 )
+    {
+        throw std::runtime_error( "Failed to create socket!" );
+        //std::cerr << "Failed to create socket (error )" << socket << '\n';
+    }
+
+    // Bind the socket to the UDP port
+    if ( FreeRTOS_bind( socket, &sock_addr, sizeof(sock_addr)) < 0 )
+    {
+        throw std::runtime_error( "Failed to bind the socket to the port!" );
+        //std::cerr << "Failed to bind the socket to the port (error )" << socket << '\n';
+    }
+}
+//==============================================================

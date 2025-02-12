@@ -26,60 +26,204 @@ class ZynqDetector
 {
 protected:
 
-    // Data types
+    //==================================================
+    //                   Data types                   //
+    //==================================================
+
+    //------------------------------
+    // UDP message
+    //------------------------------
+    const int MAX_UDP_MSG_DATA_LENG = 
+    typedef struct {
+        uint16_t id;
+        uint16_t op;
+        uint32_t data[];
+    } udp_rx_msg_t;
+
+    typedef struct {
+        uint16_t id;
+        uint16_t op;
+        uint32_t data[];
+    } udp_rx_msg_t;
+
+    //------------------------------
+    // Access request
+    //------------------------------
+    typedef struct
+    {
+        uint8_t  op;
+        bool     read;
+        uint32_t addr;
+        uint32_t data;
+    } reg_access_req_t;
+
+    typedef struct
+    {
+        uint8_t  op;
+        bool     read;
+        uint8_t  device_addr;
+        uint16_t instr_reg_addr;
+        uint16_t data_reg_addr;
+        uint32_t data;
+    } interface_single_access_req_t;
+
+    typedef struct
+    {
+        uint32_t op;
+        bool     read;
+        uint32_t leng;
+        uint8_t  device_addr;
+        uint16_t instr_reg_addr;
+        uint16_t data_reg_addr;
+        uint32_t data[4096/4 - 1];
+    } interface_multi_access_req_t;
+
+    //------------------------------
+    // Access response
+    //------------------------------
     typedef struct
     {
         uint8_t  op;
         uint32_t addr;
-    } fast_access_resp_t;
+    } reg_access_resp_t;
 
+    typedef struct
+    {
+        uint8_t   op;
+        uint32_t  data;
+    } interface_single_access_resp_t;
+    
+    typedef struct
+    {
+        uint8_t  op;
+        uint32_t leng;
+        uint32_t data[4096/4 - 1];
+    } interface_multi_access_resp_t;
+
+    //------------------------------
+    // Task parameter
+    //------------------------------
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+    } reg_access_task_param_t;
+
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+        void* read();
+        void* write();
+    } interface_single_access_task_param_t;
+
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+        void* read();
+        void* write();
+    } interface_multi_access_task_param_t;
+
+
+    //==================================================
+    //                    Variables                   //
+    //==================================================
+    //------------------------------
     // Queues
-    const uint16_t FAST_ACCESS_RESP_QUEUE_LENG = 100;
-    const uint16_t FAST_ACCESS_RESP_QUEUE_SIZE = FAST_ACCESS_RESP_QUEUE_LENG * sizeof(fast_access_resp_t);
+    //------------------------------
+    const size_t REG_ACCESS_REQ_QUEUE_LENG  = 100;
+    const size_t REG_ACCESS_RESP_QUEUE_SIZE = REG_ACCESS_RESP_QUEUE_LENG * sizeof(reg_access_resp_t);
+    const size_t REG_ACCESS_RESP_QUEUE_LENG = 100;
+    const size_t REG_ACCESS_RESP_QUEUE_SIZE = REG_ACCESS_RESP_QUEUE_LENG * sizeof(reg_access_resp_t);
+
+    const size_t INTERFACE_SINGLE_ACCESS_REQ_QUEUE_LENG  = 10;
+    const size_t INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE = INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG * sizeof(interface_single_access_resp_t);
+    const size_t INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG = 10;
+    const size_t INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE = INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG * sizeof(interface_single_access_resp_t);
+
+    const size_t INTERFACE_MULTI_ACCESS_REQ_QUEUE_LENG  = 5;
+    const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG * sizeof(interface_multi_access_resp_t);
+    const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG = 5;
+    const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG * sizeof(interface_multi_access_resp_t);
 
     axi_reg reg;
     std::unique_ptr<Network> net;
 
-    // Tasks
-    static void udp_rx_task( void *pvParameters );
-    static void udp_tx_task( void *pvParameters );
+    
+    //------------------------------
     // Task handlers
+    //------------------------------
     TaskHandle_t  udp_rx_task_handle;
     TaskHandle_t  udp_tx_task_handle;
-    
-    // msg_id parsers
-    void access_mode_decode( msg_id_t msg_id );
-    reg_addr_t fast_access_parse( msg_id_t msg_id );
-    
-    QueueHandle_t fast_access_resp_queue = NULL;
+    TaskHandle_t  fast_access_task_handle;
+    TaskHandle_t  slow_access_task_handle;
+        
+    QueueHandle_t reg_access_req_queue               = NULL;
+    QueueHandle_t reg_access_req_queue               = NULL;
+    QueueHandle_t interface_single_access_req_queue  = NULL;
+    QueueHandle_t interface_single_access_resp_queue = NULL;
+    QueueHandle_t interface_multi_access_req_queue   = NULL;
+    QueueHandle_t interface_multi_access_resp_queue  = NULL;
 
-    
-    QueueSetMemberHandle_t active_slow_req_queue;
     QueueSetMemberHandle_t active_resp_queue;
+    QueueSetHandle_t resp_queue_set;
+    //==================================================
+    
+    //------------------------------
+    // Network
+    //------------------------------
+
+    const uint16_t MAX_UDP_MSG_LENG = 4096;
+    const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
+
+    uint8_t ip_addr[4];
+    uint8_t netmask[4];
+    uint8_t gateway[4];
+    uint8_t dns[4];
+    uint8_t mac_addr[6];
+    const uint32_t UDP_PORT = 25913;
+
+    std::atomic<bool> svr_ip_addr_lock {false};
+    uint8_t svr_ip_addr[4];
+
+    int32_t udp_socket;
 
     TimerHandle_t xPollTimer = NULL;
 
     std::vector<uint32_t> poll_list{};  // PVs to be polled
 
-    virtual void queue_init();
-    virtual void create_tasks();
 
-    // Network related
+    //==================================================
+    //                    Functions                   //
+    //==================================================
+
+    //------------------------------
+    // Network
+    //------------------------------
     bool string_to_addr( const std::string& addr_str, uint8_t* addr );
     void read_network_config( const std::string& filename );
-    void network_init();
+
+    virtual void udp_rx_task( void *pvParameters );
+    virtual void udp_tx_task( void *pvParameters );
+
+    // Set failure number to register.
+    void set_fail_num( uint32_t fail_num );
+
+    template <typename T>
+    void ZynqDetector::report_err( const std::string& s, T err_code, uint32_t fail_num );
+    //==================================================
 
 public:
 
     ZynqDetector();
     ~ZynqDetector();
 
-    // Set failure number to register.
-    void set_fail_num( uint32_t fail_num );
+    void network_init();
+    virtual void queue_init();
+    virtual void task_init();
 
     template <typename T>
     void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail_num );
-
-    void Network::init
 
 };

@@ -92,147 +92,17 @@ private:
 
     axi_reg reg;
 
-    //==============================
-    // Data types
-    //------------------------------
-    // Access request
-    //------------------------------
-    typedef struct
-    {
-        uint8_t  op;
-        bool     read;
-        uint32_t addr;
-        uint32_t data;
-    } reg_access_req_t;
-
-    typedef struct
-    {
-        uint8_t  op;
-        bool     read;
-        uint8_t  device_addr;
-        uint16_t instr_reg_addr;
-        uint16_t data_reg_addr;
-        uint32_t data;
-    } interface_single_access_req_t;
-
-    typedef struct
-    {
-        uint32_t op;
-        bool     read;
-        uint32_t leng;
-        uint8_t  device_addr;
-        uint16_t instr_reg_addr;
-        uint16_t data_reg_addr;
-        uint32_t data[4096/4 - 1];
-    } interface_multi_access_req_t;
-
-    //------------------------------
-    // Access response
-    //------------------------------
-    typedef struct
-    {
-        uint8_t  op;
-        uint32_t addr;
-    } reg_access_resp_t;
-
-    typedef struct
-    {
-        uint8_t   op;
-        uint32_t  data;
-    } interface_single_access_resp_t;
-    
-    typedef struct
-    {
-        uint8_t  op;
-        uint32_t leng;
-        uint32_t data[4096/4 - 1];
-    } interface_multi_access_resp_t;
-
-    //------------------------------
-    // Task parameter
-    //------------------------------
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-    } reg_access_task_param_t;
-
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-        void* read();
-        void* write();
-    } interface_single_access_task_param_t;
-
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-        void* read();
-        void* write();
-    } interface_multi_access_task_param_t;
-
-
-    typedef struct
-    {
-        uint32_t op;
-        uint32_t leng;
-        uint32_t cfg_data[4096/4 - 1];
-    } bulk_access_resp_t;
-
-    // Tasks
-    static void udp_rx_task( void *pvParameters );
-    static void udp_tx_task( void *pvParameters );
-    
-    static void fast_access_task( void *pvParameters );  // access registers directly (fast)
-    static void slow_access_task( void *pvParameters );  // access asic/peripherals for small amount of data (slow)
-    static void bulk_access_task( void *pvParameters );  // access asic/peripheral for bulk data (slowest)
-
     // msg_id parsers
     void access_mode_decode( msg_id_t msg_id );
     reg_addr_t fast_access_parse( msg_id_t msg_id );
     
-
-    // Task handlers
-    TaskHandle_t  udp_rx_task_handle;
-    TaskHandle_t  udp_tx_task_handle;
-    TaskHandle_t  fast_access_task_handle;
-    TaskHandle_t  slow_access_task_handle;
-
     // Queues
-    const uint16_t FAST_ACCESS_REQ_QUEUE_LENG  = 100;
-    const uint16_t SLOW_ACCESS_REQ_QUEUE_LENG  = 100;
-    const uint16_t BULK_ACCESS_REQ_QUEUE_LENG  = 4;
-    const uint16_t FAST_ACCESS_RESP_QUEUE_LENG = 100;
-    const uint16_t SLOW_ACCESS_RESP_QUEUE_LENG = 100;
-    const uint16_t BULK_ACCESS_RESP_QUEUE_LENG = 4;
-
-    const uint16_t FAST_ACCESS_REQ_QUEUE_SIZE  = FAST_ACCESS_REQ_QUEUE_LENG  * sizeof(fast_access_req_t);
-    const uint16_t SLOW_ACCESS_REQ_QUEUE_SIZE  = SLOW_ACCESS_REQ_QUEUE_LENG  * sizeof(slow_access_req_t);
-    const uint16_t BULK_ACCESS_REQ_QUEUE_SIZE  = SLOW_ACCESS_REQ_QUEUE_LENG  * sizeof(bulk_access_req_t);
-    const uint16_t FAST_ACCESS_RESP_QUEUE_SIZE = FAST_ACCESS_RESP_QUEUE_LENG * sizeof(fast_access_resp_t);
-    const uint16_t SLOW_ACCESS_RESP_QUEUE_SIZE = SLOW_ACCESS_RESP_QUEUE_LENG * sizeof(slow_access_resp_t);
-    const uint16_t BULK_ACCESS_RESP_QUEUE_SIZE = SLOW_ACCESS_RESP_QUEUE_LENG * sizeof(bulk_access_resp_t);
-
-    QueueHandle_t fast_access_req_queue  = NULL;
-    QueueHandle_t slow_access_req_queue  = NULL;
-    QueueHandle_t bulk_access_req_queue  = NULL;
-    QueueHandle_t fast_access_resp_queue = NULL;
-    QueueHandle_t slow_access_resp_queue = NULL;
-    QueueHandle_t bulk_access_resp_queue = NULL;
-
-    QueueSetHandle_t slow_req_queue_set;
-    QueueSetHandle_t resp_queue_set;
-    
-    QueueSetMemberHandle_t active_slow_req_queue;
-    QueueSetMemberHandle_t active_resp_queue;
 
     TimerHandle_t xPollTimer = NULL;
 
     std::vector<uint32_t> poll_list{};  // PVs to be polled
 
-
+    /*
     // Parameters to be passed to the tasks
     typedef struct
     {
@@ -263,15 +133,12 @@ private:
         QueueHandle_t    bulk_access_resp_queue;
         QueueSetHandle_t resp_queue_set;
     } udp_tx_task_ingress_param;
+    */
 
 public:
 
     ZynqDetector();
     ~ZynqDetector();
 
-    void set_fail_num( uint32_t fail_num );
-
-    template <typename T>
-    void ZynqDetector::report_err( const std::string& s, T err_code, uint32_t fail_num );
 
 };
