@@ -22,7 +22,7 @@
 
 
 
-class ZynqDetector
+class ZynqDetector : public FPGA
 {
 protected:
 

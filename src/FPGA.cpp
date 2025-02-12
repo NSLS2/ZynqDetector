@@ -8,14 +8,14 @@
 #include <unistd.h> // For close()
 #endif
 
-#include "fpga.hpp"
+#include "FPGA.hpp"
 
 //=========================================
 // Definitions for FreeRTOS
 //=========================================
 #ifdef __FREERTOS__
 //-----------------------------------------
-axi_reg::axi_reg(uint32_t axi_base_addr)
+FPGA::FPGA(uint32_t axi_base_addr)
     : axi_base_addr( axi_base_addr )
     , reg( nullptr )
     , reg_size( 0x10000 )
@@ -23,12 +23,12 @@ axi_reg::axi_reg(uint32_t axi_base_addr)
 
 //-----------------------------------------
 
-axi_reg::~axi_reg()
+FPGA::~axi_reg()
 {}
 
 //-----------------------------------------
 
-void axi_reg::reg_wr(size_t offset, uint32_t value)
+void FPGA::reg_wr(size_t offset, uint32_t value)
 {
     while( reg_lock.exchange( true, std::memory_order_acquire) );
     *(volatile uint32_t *)(axi_base_addr + (offset)) = (value);
@@ -37,7 +37,7 @@ void axi_reg::reg_wr(size_t offset, uint32_t value)
 
 //-----------------------------------------
 
-uint32_t axi_reg::reg_rd(size_t offset)
+uint32_t FPGA::reg_rd(size_t offset)
 {
     while( reg_lock.exchange( true, std::memory_order_acquire) );
     uint32_t value = (*(volatile uint32_t *)(axi_base_addr + (offset)));
@@ -55,7 +55,7 @@ uint32_t axi_reg::reg_rd(size_t offset)
 //=========================================
 // Definitions for Linux
 //=========================================
-axi_reg::axi_reg(uint32_t axi_base_addr)
+FPGA::FPGA(uint32_t axi_base_addr)
     : axi_base_addr( axi_base_addr )
     , reg( nullptr )
     , reg_size( 0x10000 )
@@ -90,25 +90,25 @@ axi_reg::axi_reg(uint32_t axi_base_addr)
     }
 
     trace_reg( __func__,
-               ": axi_reg object created at 0x",
+               ": FPGA object created at 0x",
                std::hex, static_cast<void*>(reg), std::dec
              );
 }
 
 //-----------------------------------------
 
-axi_reg::~axi_reg()
+FPGA::~FPGA()
 {
     if (reg != nullptr)
     {
         munmap(reg, reg_size);
     }
-    trace_reg( __func__, ": axi_reg object destructed." );
+    trace_reg( __func__, ": FPGA object destructed." );
 }
 
 //-----------------------------------------
 
-void axi_reg::reg_wr(size_t offset, uint32_t value)
+void FPGA::reg_wr(size_t offset, uint32_t value)
 {
     if (offset % sizeof(uint32_t) != 0) {
         throw std::runtime_error("Offset must be aligned to register size");
@@ -133,7 +133,7 @@ void axi_reg::reg_wr(size_t offset, uint32_t value)
 
 //-----------------------------------------
 
-uint32_t axi_reg::reg_rd(size_t offset)
+uint32_t FPGA::reg_rd(size_t offset)
 {
     uint32_t val;
     if (offset % sizeof(uint32_t) != 0)
@@ -145,7 +145,6 @@ uint32_t axi_reg::reg_rd(size_t offset)
     while( reg_lock.exchange( true, std::memory_order_acquire) );
     val = *registerPtr;
     reg_lock.store( false, std::memory_order_release );
-
 
     trace_reg( __func__, ": read 0x",
                std::hex, val,

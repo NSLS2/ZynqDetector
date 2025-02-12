@@ -31,9 +31,6 @@
 
 /* The queue used by the Tx and Rx tasks, as described at the top of this
 file. */
-static TaskHandle_t xTxTask;
-static TaskHandle_t xRxTask;
-static QueueHandle_t xQueue = NULL;
 static TimerHandle_t xPollTimer = NULL;
 char HWstring[15] = "Hello World";
 long RxtaskCntr = 0;

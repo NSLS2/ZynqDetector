@@ -9,7 +9,7 @@
 
 #define REG_VER        0x0
 
-class axi_reg
+class FPGA
 {
 private:
     std::atomic<bool> locked_ {false};
