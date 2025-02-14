@@ -20,7 +20,14 @@
 #include "fpga.hpp"
 #include "network.hpp"
 
+class Udp_Msg_Handler
+{
+private:
 
+public:
+    Udp_Msg_Handler();
+
+};
 
 class ZynqDetector : public FPGA
 {
@@ -138,11 +145,18 @@ protected:
     //==================================================
     uint32_t base_addr_;
 
+
+    //------------------------------
+    // Message
+    //------------------------------
+    std::unordered_map<int, std::function<void()>> instr_map_;
+
     //------------------------------
     // Interrupt
     //------------------------------
     XScuGic gic;                               // Global Interrupt Controller
     std::map<int, TaskHandle_t> irq_task_map;  // IRQ task map as an instance member
+
 
     //------------------------------
     // Queues
@@ -213,6 +227,12 @@ protected:
     // Interrupt
     //------------------------------
     virtual static void ISR_Wrapper(void* context) = 0;
+
+
+    //------------------------------
+    // Interrupt
+    //------------------------------
+    virtual void initialize_instr_map() = 0;
 
     //------------------------------
     // Network

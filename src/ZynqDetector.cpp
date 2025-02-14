@@ -17,17 +17,19 @@
 #include "xparameters.h"
 
 // Project includes
-#include "zynqDetector.hpp"
+#include "ZynqDetector.hpp"
 #include "pynq_ssd_msg.hpp"
 
 #define TIMER_ID	1
 #define DELAY_10_SECONDS	10000UL
 #define DELAY_1_SECOND		1000UL
 #define TIMER_CHECK_THRESHOLD	9
-/*-----------------------------------------------------------*/
 
-/* The Tx and Rx tasks as described at the top of this file. */
-/*-----------------------------------------------------------*/
+
+Udp_Msg_Handler::Udp_Msg_Handler()
+{
+    create_detector_instr_map();
+}
 
 /* The queue used by the Tx and Rx tasks, as described at the top of this
 file. */
@@ -254,7 +256,6 @@ static void poll_timer_callback( TimerHandle_t pxTimer )
 
     if( std::size(poll_list) != 0 )
     {}
-	
 }
 
 

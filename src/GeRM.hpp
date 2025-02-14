@@ -1,8 +1,9 @@
 
 #include <cstdint>
+#include <string>
+#include <map>
 
-#include "network.hpp"
-#include "zynqDetector.hpp"
+#include "ZynqDetector.hpp"
 
 const uint16_t MARS_CONF_LOAD    = 0;
 const uint16_t LEDS              = 1;
@@ -39,7 +40,11 @@ const uint16_t COUNT_TIME        = 53;
 const uint16_t FRAME_NO          = 54;
 const uint16_t COUNT_MODE        = 55;
 
-const uint16_t LKUPADDRREG       = ?;
+//const uint16_t LKUPADDRREG       = ?;
+
+using Instruction_Handler = std::function<void()>;
+
+
 
 struct germ_udp_msg_t
 {
@@ -48,6 +53,31 @@ struct germ_udp_msg_t
 
 class GeRM: public ZynqDetector{
 private:
+
+
+    //======================================
+    // Instruction map
+    //======================================
+    const std::map<int, std::function<void()>> instruction_map {
+        { MARS_CONF_LOAD, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+        { LEDS, [this]() { this->load_mars_conf(); }
+      }
     void greate_tasks();
     
     void rx_msg_proc( udt_msg_t udp_msg );
