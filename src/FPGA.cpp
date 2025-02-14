@@ -10,40 +10,112 @@
 
 #include "FPGA.hpp"
 
-//=========================================
+
+
+//###################################################
 // Definitions for FreeRTOS
-//=========================================
+//###################################################
 #ifdef __FREERTOS__
-//-----------------------------------------
-FPGA::FPGA(uint32_t axi_base_addr)
-    : axi_base_addr( axi_base_addr )
-    , reg( nullptr )
-    , reg_size( 0x10000 )
-{}
 
-//-----------------------------------------
-
-FPGA::~axi_reg()
-{}
-
-//-----------------------------------------
-
-void FPGA::reg_wr(size_t offset, uint32_t value)
+//=========================================
+// Register class
+//=========================================
+Register::Register( uintptr_t base_addr )
 {
-    while( reg_lock.exchange( true, std::memory_order_acquire) );
-    *(volatile uint32_t *)(axi_base_addr + (offset)) = (value);
-    reg_lock.store( false, std::memory_order_release );
+    base_addr_ = reinterpret_cast<volatile uint32_t*>( base_addr );
 }
 
-//-----------------------------------------
-
-uint32_t FPGA::reg_rd(size_t offset)
+void Register::write( uint32_t offset, uint32_t value )
 {
-    while( reg_lock.exchange( true, std::memory_order_acquire) );
-    uint32_t value = (*(volatile uint32_t *)(axi_base_addr + (offset)));
-    reg_lock.store( false, std::memory_order_release );
-
+    if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
+    {
+        *(volatile uint32_t*)(base_addr_ + offset/4) = value;
+        xSemaphoreGive( mutex_ );
+    }
+}
+    
+uint32_t Register::read( uint32_t offset )
+{
+    uint32_t value = 0;
+    if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
+    {
+        value = *(volatile uint32_t*)(base_addr_ + offset/4);
+        xSemaphoreGive( mutex_ );
+    }
     return value;
+}
+//=========================================
+
+
+//=========================================
+// Interface class
+//=========================================
+Interface::Interface( Register& reg
+                    , uint32_t config_reg
+                    , uint32_t instr_reg
+                    , uint32_t data_reg
+                    , uint32_t baud_rate
+                    )
+    : reg_        ( reg       )
+    , instr_reg_  ( instr_reg )
+    , data_reg_   ( data_reg  )
+    , baud_rate_  ( baud_rate )
+{}
+
+void Interface::write( uint32_t instr, uint32_t data )
+{
+    reg_.write( data_reg_, data );
+    reg_.write( instr_reg_, instr );
+    wait_for_completion();
+}
+
+uint32_t Interface::read( uint32_t instr, uint32_t data )
+{
+    reg_.write( data_reg_, data );
+    reg_.write( instr_reg_, instr );
+    wait_for_completion();
+    return reg_.read( data_reg_ );    // Read data
+}
+
+void Interface::wait_for_completion()
+{
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Wait indefinitely for ISR notification
+}
+//=========================================
+
+
+//-----------------------------------------
+FPGA::FPGA( Register& reg )
+    : reg_( reg )
+{}
+
+
+void FPGA::add_i2c_interface( const std::string& name, uint32_t instr_reg, uint32_t data_reg)
+{
+    i2c_interfaces_.emplace( std::piecewise_construct,
+                             std::forward_as_tuple( name ),
+                             std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+}
+
+void FPGA::add_spi_interface( const std::string& name,
+                              uint32_t instr_reg,
+                              uint32_t data_reg )
+{
+    spi_interfaces_.emplace( std::piecewise_construct,
+                             std::forward_as_tuple( name ),
+                             std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+}
+
+I2CInterface* FPGA::get_i2c_interface( const std::string& name )
+{
+    auto it = i2c_interfaces_.find( name );
+    return ( it != i2c_interfaces_.end() ) ? &(it->second) : nullptr;
+}
+
+SPIInterface* FPGA::get_spi_interface(const std::string& name)
+{
+    auto it = spi_interfaces_.find( name );
+    return ( it != spi_interfaces_.end() ) ? &(it->second) : nullptr;
 }
 
 //=========================================

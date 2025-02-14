@@ -253,8 +253,6 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
     //=============================
     xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
 
-
-
     while(1)
     {
         lReceivedBytes = FreeRTOS_recvfrom( xSocket, ucReceiveBuffer, sizeof( ucReceiveBuffer ), 0, ( struct freertos_sockaddr * ) &xClientAddress, &xClientAddressLength );
@@ -306,17 +304,17 @@ void ZynqDetector::udp_tx_task( void *pvParameters )
     {
         active_resp_queue = ( resp_queue_set, portMAX_DELAY );
 
-        if ( active_resp_queue == fast_access_resp_queue )
+        if ( active_resp_queue == reg_access_resp_queue )
         {
 
         }
         else
         {
-            if ( active_resp_queue == slow_access_resp_queue )
+            if ( active_resp_queue == interface_single_access_resp_queue )
             {
 
             }
-            else // active_resp_queue == bulk_access_resp_queue
+            else // active_resp_queue == interface_multi_access_resp_queue
             {
                 
             }
