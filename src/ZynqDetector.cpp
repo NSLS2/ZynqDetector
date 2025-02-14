@@ -46,6 +46,13 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
+//===============================================================
+// Constructor.
+//===============================================================
+ZynqDetector::ZynqDetector( uint32_t base_addr )
+    : base_addr_( base_addr )
+{}
+
 
 //===============================================================
 // This task performs single register read/write operation.

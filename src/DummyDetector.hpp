@@ -1,5 +1,11 @@
 #pragma once
 
+
+
+#include "FreeRTOS.h"
+#include "task.h"
+#include "ZynqDetector.h"
+
 // This is an example of detector class derived from ZynqDetector.
 
 typedef uint32_t reg_addr_t;
@@ -163,8 +169,16 @@ protected:
     void i2c0_isr()
     {
         
-    }
+    void ISR_Handler() override;
+    void RegisterISR() override;
 
+    static void ISR_Wrapper(void* context);
 
+    static void ISR_Wrapper(void* context);
+
+public:
+
+    void isr_handler() override;
+    void register_isr() override;
 
 };

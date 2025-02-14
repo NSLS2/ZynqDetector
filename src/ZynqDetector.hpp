@@ -136,6 +136,14 @@ protected:
     //==================================================
     //                    Variables                   //
     //==================================================
+    uint32_t base_addr_;
+
+    //------------------------------
+    // Interrupt
+    //------------------------------
+    XScuGic gic;                               // Global Interrupt Controller
+    std::map<int, TaskHandle_t> irq_task_map;  // IRQ task map as an instance member
+
     //------------------------------
     // Queues
     //------------------------------
@@ -154,8 +162,8 @@ protected:
     const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG = 5;
     const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG * sizeof(interface_multi_access_resp_t);
 
-    axi_reg reg;
-    std::unique_ptr<Network> net;
+    QueueSetMemberHandle_t active_resp_queue;
+    QueueSetHandle_t resp_queue_set;
 
     
     //------------------------------
@@ -173,9 +181,6 @@ protected:
     QueueHandle_t interface_multi_access_req_queue   = NULL;
     QueueHandle_t interface_multi_access_resp_queue  = NULL;
 
-    QueueSetMemberHandle_t active_resp_queue;
-    QueueSetHandle_t resp_queue_set;
-    //==================================================
     
     //------------------------------
     // Network
@@ -204,6 +209,10 @@ protected:
     //==================================================
     //                    Functions                   //
     //==================================================
+    //------------------------------
+    // Interrupt
+    //------------------------------
+    virtual static void ISR_Wrapper(void* context) = 0;
 
     //------------------------------
     // Network
@@ -223,8 +232,12 @@ protected:
 
 public:
 
-    ZynqDetector();
+    ZynqDetector( uint32_t base_addr );
     ~ZynqDetector();
+
+    virtual void isr_handler() = 0;
+    virtual void register_isr() = 0;
+    void DummyDetector::create_irq_task_map();
 
     void network_init();
     virtual void queue_init();

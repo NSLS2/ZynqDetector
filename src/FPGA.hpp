@@ -82,8 +82,6 @@ public:
 class FPGA
 {
 private:
-    std::atomic<bool> locked_ {false};
-
     Register reg_;
     std::map<std::string, I2CInterface> i2c_interfaces_;
     std::map<std::string, SPIInterface> spi_interfaces_;
