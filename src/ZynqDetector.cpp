@@ -57,6 +57,23 @@ ZynqDetector::ZynqDetector( uint32_t base_addr )
 
 
 //===============================================================
+//  Single register access.
+//  Assembles fast access request and sends it to the queue.
+//===============================================================
+void single_reg_acc_req_proc( udp_rx_msg_t& msg )
+{
+    fast_access_req_t req;
+    req.op   = msg->op;
+    req.data = msg->data;
+    xQueueSend( fast_access_req_queue,
+            	req,
+                0UL );
+}
+//===============================================================
+
+
+/*
+//===============================================================
 // This task performs single register read/write operation.
 //===============================================================
 void ZynqDetector::reg_access_task( void *pvParameters )
@@ -86,6 +103,34 @@ void ZynqDetector::reg_access_task( void *pvParameters )
     }
 }
 //===============================================================
+*/
+
+//===============================================================
+// This task performs single register read/write operation.
+//===============================================================
+void ZynqDetector::single_register_access_task()
+{
+    SingleRegisterAccessReq  req;
+    SingleRegisterAccessResp resp;
+
+    xQueueReceive( (QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
+				   &req,	/* Data is read into this address. */
+				   portMAX_DELAY );	/* Wait without a timeout for data. */
+
+    if( msg.op && 0x80 )
+    {
+        resp.op   = msg.op;
+        resp.data = reg_rd( msg.reg );
+        xQueueSend( fast_access_resp_queue,
+        			resp,
+                    0UL );
+    }
+    else
+    {
+        reg_wr( msg.op && 0x3F, msg.data );
+    }
+
+}
 
 
 //===============================================================
@@ -399,11 +444,13 @@ void ZynqDetector::udp_rx_task( void *pvParameters )
             
         }
 
+        
         rx_msg_proc( msg );
     }
 
 }
 //===============================================================
+
 
 
 //===============================================================
@@ -620,3 +667,16 @@ ZynqDetector::network_init()
     }
 }
 //==============================================================
+
+
+void ZynqDetector::rx_msg_proc(int instr, std::any& msg) {
+    auto it = instr_map_.find(instr);
+    if (it != instr_map_.end())
+    {
+        it->second(msg);  // Call the corresponding function
+    }
+    else
+    {
+        std::cout << "Unknown instruction: " << instr << '\n';
+    }
+}

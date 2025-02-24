@@ -58,11 +58,9 @@ protected:
     //------------------------------
     typedef struct
     {
-        uint8_t  op;
-        bool     read;
-        uint32_t addr;
+        uint16_t op;
         uint32_t data;
-    } reg_access_req_t;
+    } SingleRegisterAccessReq;
 
     typedef struct
     {
@@ -90,9 +88,9 @@ protected:
     //------------------------------
     typedef struct
     {
-        uint8_t  op;
-        uint32_t addr;
-    } reg_access_resp_t;
+        uint16_t  op;
+        uint32_t  data;
+    } SingleRegisterAccessResp;
 
     typedef struct
     {
@@ -243,6 +241,8 @@ protected:
     virtual void udp_rx_task( void *pvParameters );
     virtual void udp_tx_task( void *pvParameters );
 
+    virtual void single_reg_access( udp_msg_t& msg );
+
     // Set failure number to register.
     void set_fail_num( uint32_t fail_num );
 
@@ -259,11 +259,17 @@ public:
     virtual void register_isr() = 0;
     void DummyDetector::create_irq_task_map();
 
+    using InstructionHandler = std::function<void(std::any&)>;
+    std::map<int, InstructionHandler> instr_map_;
+    
     void network_init();
     virtual void queue_init();
     virtual void task_init();
 
     template <typename T>
     void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail_num );
+
+    virtual void single_reg_acc_req_proc( udp_rx_msg_t& msg );
+
 
 };
