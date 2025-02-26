@@ -54,167 +54,7 @@ static StaticQueue_t xStaticQueue;
 ZynqDetector::ZynqDetector( uint32_t base_addr )
     : base_addr_( base_addr )
 {}
-
-
 //===============================================================
-//  Single register access.
-//  Assembles fast access request and sends it to the queue.
-//===============================================================
-void single_reg_acc_req_proc( udp_rx_msg_t& msg )
-{
-    fast_access_req_t req;
-    req.op   = msg->op;
-    req.data = msg->data;
-    xQueueSend( fast_access_req_queue,
-            	req,
-                0UL );
-}
-//===============================================================
-
-
-/*
-//===============================================================
-// This task performs single register read/write operation.
-//===============================================================
-void ZynqDetector::reg_access_task( void *pvParameters )
-{
-    reg_access_req_t  req;
-    reg_access_resp_t resp;
-
-    auto param = static_cast<reg_access_task_param_t*>(pvParameters);
-
-    while(1)
-    {
-        xQueueReceive( 	static_cast<(QueueHandle_t*>(pvParameters),
-						&req,
-						portMAX_DELAY );
-        
-        if ( req.read )
-        {
-            resp.op = req.op;
-            resp.data = reg_rd ( req );
-            xQueueSend( (QueueHandle_t*)resp,
-                        )
-        }
-        else
-        {
-            reg_wr( req.addr, req.data );
-        }
-    }
-}
-//===============================================================
-*/
-
-//===============================================================
-// This task performs single register read/write operation.
-//===============================================================
-void ZynqDetector::single_register_access_task()
-{
-    SingleRegisterAccessReq  req;
-    SingleRegisterAccessResp resp;
-
-    xQueueReceive( (QueueHandle_t*)fast_access_req_queue,				/* The queue being read. */
-				   &req,	/* Data is read into this address. */
-				   portMAX_DELAY );	/* Wait without a timeout for data. */
-
-    if( msg.op && 0x80 )
-    {
-        resp.op   = msg.op;
-        resp.data = reg_rd( msg.reg );
-        xQueueSend( fast_access_resp_queue,
-        			resp,
-                    0UL );
-    }
-    else
-    {
-        reg_wr( msg.op && 0x3F, msg.data );
-    }
-
-}
-
-
-//===============================================================
-// This task performs single register read/write operation.
-//===============================================================
-void ZynqDetector::interface_single_access_task( void *pvParameters )
-{
-    interface_single_access_req_t  req;
-    interface_single_access_resp_t resp;
-
-    auto param = static_cast<interface_single_access_task_param*>(pvParameters);
-
-    while(1)
-    {
-        xQueueReceive( 	static_cast<QueueHandle_t*>(param).req_queue,
-						&req,
-						portMAX_DELAY );
-        
-        if ( req.read )
-        {
-            interface_read( req.device_addr, req.data );
-            resp.op = req.op;
-
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            resp.data = reg.rd( req.addr );
-
-            xQueueSend( static_cast<QueueHandle_t*>(param).resp_queue,
-                        static_cast<const void*>(resp),
-                        portMAX_DELAY );
-        }
-    }
-}
-//===============================================================
-
-//===============================================================
-// This task processes requests that need to continuously 
-// access a device multiple times, e.g., to configure a device
-// through an I2C bus while the configuration data consists of
-// multiple dwords.
-//===============================================================
-void ZynqDetector::interface_multi_access_task( void *pvParameters )
-{
-    interface_multi_access_req_t  req;
-    interface_multi_access_resp_t resp;
-
-    while(1)
-    {
-        xQueueReceive( 	static_cast<QueueHandle_t*>(param).req_queue,
-						&req,
-                        portMAX_DELAY );
-
-        // compose the instruction queue
-        
-        for ( int i=0; !instr_queue.empty(); ++i )
-        {
-            auto instr = instr_queue.front();
-            instr_queue.pop();
-            if ( instr.read )
-            {
-                read( instr.device_addr, instr.reg_addr );
-            else
-            {
-                write( instr.device_addr, instr.reg_addr, instr.data );
-            }
-
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            if ( instr.read )
-            {
-                resp.data[i] = reg.rd( req.addr );
-            }
-        }
-
-        if( req.read )
-        {
-            resp.op = req.op;
-            
-            xQueueSend( static_cast<QueueHandle_t*>(param).resp_queue,
-                        static_cast<const void*>(resp),
-                        portMAX_DELAY );
-        }
-    }
-}
-//===============================================================
-
 
 //===============================================================
 //===============================================================
@@ -252,249 +92,44 @@ ZynqDetector::ZynqDetector( void )
 }
 //===============================================================
 
-
-/*-----------------------------------------------------------*/
-static void prvTxTask( void *pvParameters )
+void ZynqDetector::must_override()
 {
-const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
-
-	for( ;; )
-	{
-		/* Delay for 1 second. */
-		vTaskDelay( x1second );
-
-		/* Send the next value on the queue.  The queue should always be
-		empty at this point so a block time of 0 is used. */
-		xQueueSend( xQueue,			/* The queue being written to. */
-					HWstring, /* The address of the data being sent. */
-					0UL );			/* The block time. */
-	}
+    std::cout << __PRETTY_FUNCTION__
+        << " for reference only. Implement it for the specific detector.\n" );
+    exit();
 }
 
-/*-----------------------------------------------------------*/
-static void prvRxTask( void *pvParameters )
+//===============================================================
+// Network initialization.
+//===============================================================
+ZynqDetector::network_init()
 {
-char Recdstring[15] = "";
+    read_network_config( "config" );
 
-	for( ;; )
-	{
-		/* Block to wait for data arriving on the queue. */
-		
+    struct freertos_sockaddr sock_addr;
+    sock_addr.sin_port = FreeRTOS_htons( 25913 );
+    sock_addr.sin_addr = FreeRTOS_inet_addr( ip_addr_ );
 
-		/* Print the received data. */
-		xil_printf( "Rx task received string from Tx task: %s\r\n", Recdstring );
-		RxtaskCntr++;
-	}
-}
+    // Initialize the FreeRTOS+TCP stack
+    FreeRTOS_IPInit( ip_addr_, netmask_, gateway_, dns_, mac_address_ );
 
-/*-----------------------------------------------------------*/
-static void poll_timer_callback( TimerHandle_t pxTimer )
-{
-	long lTimerId;
-	configASSERT( pxTimer );
+    // Create a UDP socket
+    udp_socket_ = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
 
-	lTimerId = ( long ) pvTimerGetTimerID( pxTimer );
-
-	if (lTimerId != TIMER_ID) {
-		xil_printf("FreeRTOS Hello World Example FAILED");
-	}
-
-    if( std::size(poll_list) != 0 )
-    {}
-}
-
-
-//===============================================================
-// Write failure number to register.
-//===============================================================
-void ZynqDetector:set_fail_num( uint32_t failure_num )
-{
-    reg_wr( REG_DEVICE_STATUS, failure_num );
-}
-
-
-//===============================================================
-void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail_num )
-{
-    std::cout << s << ". Error code " << err_code << '\n';
-    ZynqDetector::set_fail_num( fail_num );
-}
-//===============================================================
-
-
-//===============================================================
-//===============================================================
-void ZynqDetector::queue_init()
-{
-    //==================================================
-    // This function definition is for reference only.
-    // A derived class must override.
-    throw std::runtime_error( __PRETTY_FUNCTION__
-        + " for reference only. Implement it for the derived class." );
-    //==================================================
-
-    // Create queues        
-	reg_access_req_queue               = xQueueCreate( 100, sizeof( reg_access_req_t ) );
-	interface_single_access_req_queue  = xQueueCreate( 100, sizeof( interface_single_access_req_t ) );
-    interface_multi_access_req_queue   = xQueueCreate( 4,   sizeof( interface_multi_access_req_t ) );
-	reg_access_resp_queue              = xQueueCreate( 100, sizeof( reg_access_resp_t ) );
-	interface_single_access_resp_queue = xQueueCreate( 100, sizeof( interface_single_access_resp_t ) );
-    interface_multi_access_resp_queue  = xQueueCreate( 4,   sizeof( interface_multi_access_resp_t ) );
-
-    // Create queue sets
-    resp_queue_set = xQueueCreateSet( 
-        REG_ACCESS_RESP_QUEUE_SIZE +
-        INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE +
-        INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE );
-
-    xQueueAddToSet( reg_access_resp_queue, resp_queue_set );
-    xQueueAddToSet( interface_single_access_resp_queue, resp_queue_set );
-    xQueueAddToSet( interface_multi_access_resp_queue, resp_queue_set );
-}
-
-
-//===============================================================
-//===============================================================
-void ZynqDetector:task_init()
-{
-    //==================================================
-    // This function definition is for reference only.
-    // A derived class must override.
-    throw std::runtime_error( __PRETTY_FUNCTION__
-        + " for reference only. Implement it for the derived class." );
-    //==================================================
-
-	xTaskCreate( udp_rx_task, 				 // The function that implements the task.
-                 ( const char * ) "UDP_RX",  // Text name for the task, provided to assist debugging only.
-				 configMINIMAL_STACK_SIZE,   // The stack allocated to the task.
-				 NULL, 					     // The task parameter is not used, so set to NULL.
-				 tskIDLE_PRIORITY,			 // The task runs at the idle priority.
-				 &udp_rx_task_handle );
-
-	xTaskCreate( udp_tx_task,
-				 ( const char * ) "UDP_TX",
-				 configMINIMAL_STACK_SIZE,
-				 NULL,
-				 tskIDLE_PRIORITY + 1,
-				 &udp_tx_task_handle );
-
-	xTaskCreate( reg_access_task,
-				 ( const char * ) "REG_ACCESS",
-				 configMINIMAL_STACK_SIZE,
-				 NULL,
-				 tskIDLE_PRIORITY + 1,
-				 &reg_access_task_handle );
-
-    xTaskCreate( interface_signle_access_task,
-                 ( const char * ) "SLOW_ACCESS",
-                 configMINIMAL_STACK_SIZE,
-                 NULL,
-                 tskIDLE_PRIORITY + 1,
-                 &interface_single_access_task_handle );
-
-	xTaskCreate( interface_multi_access_task,
-				 ( const char * ) "SLOW_ACCESS",
-				 configMINIMAL_STACK_SIZE,
-				 NULL,
-				 tskIDLE_PRIORITY + 1,
-				 &interface_multi_access_task_handle );
-}
-//===============================================================
-
-
-
-//===============================================================
-// UDP receive task.
-//===============================================================
-void ZynqDetector::udp_rx_task( void *pvParameters )
-{
-    udp_req_msg_t msg;
-    uint32_t msg_leng;
-    
-    struct freertos_sockaddr src_sock_addr;
-    socklen_t src_addr_leng = sizeof(src_sock_addr);
-
-    uint32_t remote_ip_addr, remote_ip_addr_tmp;
-
-    //=============================
-    // Initialize network
-    //=============================
-    xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
-
-    while(1)
+    if ( socket < 0 )
     {
-        uint16_t msg_leng = FreeRTOS_recvfrom( xSocket,
-                                               &msg,
-                                               sizeof( msg ),
-                                               0,
-                                               ( struct freertos_sockaddr * ) &src_sock_addr,
-                                               &src_addr_leng );
-
-        if ( (msg_leng <= 0) || (msg.id != UDP_MSG_ID) )
-        {
-            // error report
-            continue;
-        }
-
-        remote_ip_addr_tmp = FreeRTOS_ntohl(src_addr.sin_addr);
-        if ( remote_ip_addr_tmp != remote_ip_addr )
-        {
-            // update server IP address
-            remote_ip_addr = remote_ip_addr_tmp;
-            
-        }
-
-        
-        rx_msg_proc( msg );
+        throw std::runtime_error( "Failed to create socket!" );
+        //std::cerr << "Failed to create socket (error )" << socket << '\n';
     }
 
-}
-//===============================================================
-
-
-
-//===============================================================
-// UDP transmit task.
-//===============================================================
-void ZynqDetector::udp_tx_task( void *pvParameters )
-{
-    //==================================================
-    // This function definition is for reference only.
-    // A derived class must override.
-    throw std::runtime_error( __PRETTY_FUNCTION__
-        + " for reference only. Implement it for the derived class." );
-    //==================================================
-    
-    struct freertos_sockaddr dest_sock_addr;
-    socklen_t dest_sock_addr_leng = sizeof(xDestination);
-    int32_t bytesSent;
-
-    dest_sock_addr.sin_addr = FreeRTOS_inet_addr_quick( svr_ip_addr[3],
-                                                        svr_ip_addr[2],
-                                                        svr_ip_addr[1],
-                                                        svr_ip_addr[0] );
-    dest_sock_addr.sin_port = FreeRTOS_htons(UDP_PORT);
-
-    udp_tx_msg_t msg;
-    
-    while(1)
+    // Bind the socket to the UDP port
+    if ( FreeRTOS_bind( socket, &sock_addr, sizeof( sock_addr ) ) < 0 )
     {
-        tx_msg_proc( msg );
-        tx_leng = FreeRTOS_sendto( udp_socket,
-                                   msg,
-                                   msg.leng + 4, // ID (2) + OP (2) + data
-                                   0,
-                                   &dest_sock_addr,
-                                   dest_sock_addr_leng );
-        if ( tx_leng <= 0 )
-        {
-            std::err << "Failed to send UDP message.\n";
-        }
+        throw std::runtime_error( "Failed to bind the socket to the port!" );
+        //std::cerr << "Failed to bind the socket to the port (error )" << socket << '\n';
     }
 }
-//===============================================================
-
-
+//==============================================================
 
 //===============================================================
 // Convert a string to an IP/MAC address.
@@ -556,7 +191,6 @@ bool ZynqDetector::string_to_addr( const std::string& addr_str, uint8_t* addr )
 // - DNS server
 // - MAC address
 //===============================================================
-
 void ZynqDetector::read_network_config( const std::string& filename )
 {
     FATFS fs;    // File system object
@@ -636,40 +270,209 @@ void ZynqDetector::read_network_config( const std::string& filename )
 //===============================================================
 
 
+
 //===============================================================
-// Network initialization.
+//  Single register access.
+//  Assembles fast access request and sends it to the queue.
 //===============================================================
-ZynqDetector::network_init()
+void ZynqDetector::single_reg_acc_req_proc( udp_rx_msg_t& msg )
 {
-    read_network_config( "config" );
+    fast_access_req_t req;
+    req.op   = msg->op;
+    req.data = msg->data;
+    xQueueSend( fast_access_req_queue_,
+            	req,
+                0UL );
+}
+//===============================================================
 
-    struct freertos_sockaddr sock_addr;
-    sock_addr.sin_port = FreeRTOS_htons( 25913 );
-    sock_addr.sin_addr = FreeRTOS_inet_addr( ip_addr );
+/*
+//===============================================================
+// This task performs single register read/write operation.
+//===============================================================
+void ZynqDetector::reg_access_task( void *pvParameters )
+{
+    reg_access_req_t  req;
+    reg_access_resp_t resp;
 
-    // Initialize the FreeRTOS+TCP stack
-    FreeRTOS_IPInit( ip_address, netmask, gateway, dns, mac_address );
+    auto param = static_cast<reg_access_task_param_t*>(pvParameters);
 
-    // Create a UDP socket
-    int32_t socket = FreeRTOS_socket( FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP );
-
-    if ( socket < 0 )
+    while(1)
     {
-        throw std::runtime_error( "Failed to create socket!" );
-        //std::cerr << "Failed to create socket (error )" << socket << '\n';
-    }
-
-    // Bind the socket to the UDP port
-    if ( FreeRTOS_bind( socket, &sock_addr, sizeof(sock_addr)) < 0 )
-    {
-        throw std::runtime_error( "Failed to bind the socket to the port!" );
-        //std::cerr << "Failed to bind the socket to the port (error )" << socket << '\n';
+        xQueueReceive( 	static_cast<(QueueHandle_t*>(pvParameters),
+						&req,
+						portMAX_DELAY );
+        
+        if ( req.read )
+        {
+            resp.op = req.op;
+            resp.data = reg_rd ( req );
+            xQueueSend( (QueueHandle_t*)resp,
+                        )
+        }
+        else
+        {
+            reg_wr( req.addr, req.data );
+        }
     }
 }
-//==============================================================
+//===============================================================
+*/
+
+//===============================================================
+// This task performs single register read/write operation.
+//===============================================================
+void ZynqDetector::single_register_access_task()
+{
+    SingleRegisterAccessReq  req;
+    SingleRegisterAccessResp resp;
+
+    xQueueReceive( (QueueHandle_t*)fast_access_req_queue_,
+				   &req,
+				   portMAX_DELAY );
+
+    if( req.op && 0x80 )
+    {
+        resp.op   = req.op;
+        resp.data = reg_rd( req.reg );
+        xQueueSend( fast_access_resp_queue_,
+        			resp,
+                    0UL );
+    }
+    else
+    {
+        reg_wr( msg.op && 0x3F, msg.data );
+    }
+
+}
+//===============================================================
 
 
-void ZynqDetector::rx_msg_proc(int instr, std::any& msg) {
+
+/*-----------------------------------------------------------*/
+static void prvTxTask( void *pvParameters )
+{
+const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
+
+	for( ;; )
+	{
+		/* Delay for 1 second. */
+		vTaskDelay( x1second );
+
+		/* Send the next value on the queue.  The queue should always be
+		empty at this point so a block time of 0 is used. */
+		xQueueSend( xQueue,			/* The queue being written to. */
+					HWstring, /* The address of the data being sent. */
+					0UL );			/* The block time. */
+	}
+}
+
+/*-----------------------------------------------------------*/
+static void prvRxTask( void *pvParameters )
+{
+char Recdstring[15] = "";
+
+	for( ;; )
+	{
+		/* Block to wait for data arriving on the queue. */
+		
+
+		/* Print the received data. */
+		xil_printf( "Rx task received string from Tx task: %s\r\n", Recdstring );
+		RxtaskCntr++;
+	}
+}
+
+/*-----------------------------------------------------------*/
+static void poll_timer_callback( TimerHandle_t pxTimer )
+{
+	long lTimerId;
+	configASSERT( pxTimer );
+
+	lTimerId = ( long ) pvTimerGetTimerID( pxTimer );
+
+	if (lTimerId != TIMER_ID) {
+		xil_printf("FreeRTOS Hello World Example FAILED");
+	}
+
+    if( std::size(poll_list) != 0 )
+    {}
+}
+
+
+//===============================================================
+// Write failure number to register.
+//===============================================================
+void ZynqDetector:set_fail_num( uint32_t failure_num )
+{
+    reg_wr( REG_DEVICE_STATUS, failure_num );
+}
+
+
+//===============================================================
+void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail_num )
+{
+    std::cout << s << ". Error code " << err_code << '\n';
+    ZynqDetector::set_fail_num( fail_num );
+}
+//===============================================================
+
+
+//===============================================================
+// UDP receive task.
+//===============================================================
+void ZynqDetector::udp_rx_task( void *pvParameters )
+{
+    UDPRxMsg msg;
+    uint32_t msg_leng;
+    
+    struct freertos_sockaddr src_sock_addr;
+    socklen_t src_addr_leng = sizeof( src_sock_addr );
+
+    uint32_t remote_ip_addr, remote_ip_addr_tmp;
+
+    //=============================
+    // Initialize network
+    //=============================
+    xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
+
+    while(1)
+    {
+        uint16_t msg_leng = FreeRTOS_recvfrom( udp_socket_,
+                                               &msg,
+                                               sizeof( msg ),
+                                               0,
+                                               ( struct freertos_sockaddr * ) &src_sock_addr,
+                                               &src_addr_leng );
+
+        if ( (msg_leng <= 0) || (msg.id != UDP_MSG_ID) )
+        {
+            // error report
+            continue;
+        }
+
+        remote_ip_addr_tmp = FreeRTOS_ntohl(src_addr.sin_addr);
+        if ( remote_ip_addr_tmp != remote_ip_addr )
+        {
+            // update server IP address
+            remote_ip_addr = remote_ip_addr_tmp;
+            memcpy( svr_ip_addr_, &remote_ip_addr, 4 );
+        }
+        
+        rx_msg_proc( msg );
+    }
+
+}
+//===============================================================
+
+
+
+//===============================================================
+// UDP Rx message processing.
+//===============================================================
+void ZynqDetector::rx_msg_proc( std::any& msg )
+{
+    int instr = msg.op && 0x8F;
     auto it = instr_map_.find(instr);
     if (it != instr_map_.end())
     {
@@ -680,3 +483,4 @@ void ZynqDetector::rx_msg_proc(int instr, std::any& msg) {
         std::cout << "Unknown instruction: " << instr << '\n';
     }
 }
+//===============================================================

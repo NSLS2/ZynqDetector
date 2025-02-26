@@ -291,7 +291,6 @@ void GeDetector::create_tasks()
 
 
 
-
 void GeDetector::rx_msg_proc( udp_rx_msg_t& udp_msg )
 {
     op = udp_msg.op >> 14;

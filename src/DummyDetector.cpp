@@ -39,7 +39,7 @@ void DummyDetector::isr_handler()
 //===============================================================
 // Register ISR with the interrupt controller
 //===============================================================
-void DummyDetector::register_isr()
+void ZynqDetector::interrupt_init()
 {
     XScuGic_Config* gic_config;
     
@@ -68,6 +68,173 @@ void DummyDetector::register_isr()
 //===============================================================
 
 
+
+//===============================================================
+// Message queue initialization.
+//===============================================================
+void DummyDetector::queue_init()
+{
+    //==================================================
+    // This function definition is for reference only,
+    // and must be overriden by the derived class.
+
+    //==================================================
+
+    // Create queues
+	single_register_access_req_queue      = xQueueCreate( 100, sizeof( SingleRegisterAccessReq ) );
+	pl_interface_single_access_req_queue  = xQueueCreate( 100, sizeof( PlInterfaceSingleAccessReq ) );
+    pl_interface_multi_access_req_queue   = xQueueCreate( 4,   sizeof( PlInterfaceMultiAccessReq ) );
+    ps_interface_access_req_queue         = xQueueCreate( 4,   sizeof( PsInterfaceAccessReq ) );
+	single_register_access_resp_queue     = xQueueCreate( 100, sizeof( SingleRegisterAccessResp ) );
+	pl_interface_single_access_resp_queue = xQueueCreate( 100, sizeof( PlInterfaceSingleAccessResp ) );
+    pl_interface_multi_access_resp_queue  = xQueueCreate( 4,   sizeof( PlInterfaceMultiAccessResp ) );
+    ps_interface_access_req_queue         = xQueueCreate( 4,   sizeof( PsInterfaceAccessResp ) );
+
+    // Create queue sets
+    resp_queue_set = xQueueCreateSet( 
+        REG_ACCESS_RESP_QUEUE_SIZE +
+        INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE +
+        INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE );
+
+    xQueueAddToSet( single_register_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( pl_interface_single_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( pl_interface_multi_access_resp_queue, resp_queue_set );
+    xQueueAddToSet( ps_interface_access_req_queue, resp_queue_set );
+}
+//===============================================================
+
+
+//===============================================================
+//===============================================================
+void ZynqDetector:task_init()
+{
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+
+	xTaskCreate( udp_rx_task, 				 // The function that implements the task.
+                 ( const char * ) "UDP_RX",  // Text name for the task, provided to assist debugging only.
+				 configMINIMAL_STACK_SIZE,   // The stack allocated to the task.
+				 NULL, 					     // The task parameter is not used, so set to NULL.
+				 tskIDLE_PRIORITY,			 // The task runs at the idle priority.
+				 &udp_rx_task_handle );
+
+	xTaskCreate( udp_tx_task,
+				 ( const char * ) "UDP_TX",
+				 configMINIMAL_STACK_SIZE,
+				 NULL,
+				 tskIDLE_PRIORITY + 1,
+				 &udp_tx_task_handle );
+
+	xTaskCreate( single_register_access_task,
+				 ( const char * ) "SINGLE_REGISTER_ACCESS",
+				 configMINIMAL_STACK_SIZE,
+				 NULL,
+				 tskIDLE_PRIORITY + 1,
+				 &reg_access_task_handle );
+
+    xTaskCreate( pl_if_signle_access_task,
+                 ( const char * ) "PL_IF_SINGLE_ACCESS",
+                 configMINIMAL_STACK_SIZE,
+                 NULL,
+                 tskIDLE_PRIORITY + 1,
+                 &interface_single_access_task_handle );
+
+	xTaskCreate( pl_if_multi_access_task,
+				 ( const char * ) "PL_IF_MULTI_ACCESS",
+				 configMINIMAL_STACK_SIZE,
+				 NULL,
+				 tskIDLE_PRIORITY + 1,
+				 &interface_multi_access_task_handle );
+}
+//===============================================================
+
+
+//===============================================================
+// This task performs single register read/write operation.
+//===============================================================
+void ZynqDetector::pl_if_single_access_task( void *pvParameters )
+{
+    interface_single_access_req_t  req;
+    interface_single_access_resp_t resp;
+
+    auto param = static_cast<interface_single_access_task_param*>(pvParameters);
+
+    while(1)
+    {
+        xQueueReceive( 	static_cast<QueueHandle_t*>(param).req_queue,
+						&req,
+						portMAX_DELAY );
+        
+        if ( req.read )
+        {
+            interface_read( req.device_addr, req.data );
+            resp.op = req.op;
+
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            resp.data = reg.rd( req.addr );
+
+            xQueueSend( static_cast<QueueHandle_t*>(param).resp_queue,
+                        static_cast<const void*>(resp),
+                        portMAX_DELAY );
+        }
+    }
+}
+//===============================================================
+
+//===============================================================
+// This task processes requests that need to continuously 
+// access a device multiple times, e.g., to configure a device
+// through an I2C bus while the configuration data consists of
+// multiple dwords.
+//===============================================================
+void ZynqDetector::pl_if_multi_access_task()( void *pvParameters )
+{
+    interface_multi_access_req_t  req;
+    interface_multi_access_resp_t resp;
+
+    while(1)
+    {
+        xQueueReceive( 	static_cast<QueueHandle_t*>(param).req_queue,
+						&req,
+                        portMAX_DELAY );
+
+        // compose the instruction queue
+        
+        for ( int i=0; !instr_queue.empty(); ++i )
+        {
+            auto instr = instr_queue.front();
+            instr_queue.pop();
+            if ( instr.read )
+            {
+                read( instr.device_addr, instr.reg_addr );
+            }
+            else
+            {
+                write( instr.device_addr, instr.reg_addr, instr.data );
+            }
+
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            if ( instr.read )
+            {
+                resp.data[i] = reg.rd( req.addr );
+            }
+        }
+
+        if( req.read )
+        {
+            resp.op = req.op;
+            
+            xQueueSend( static_cast<QueueHandle_t*>(param).resp_queue,
+                        static_cast<const void*>(resp),
+                        portMAX_DELAY );
+        }
+    }
+}
+//===============================================================
 
 //===============================================================
 // UDP request handlers.
@@ -119,7 +286,49 @@ void DummyDetector::create_irq_task_map()
 //===============================================================
 
 
-void DummyDetector::initialize_instr_map()
-{
 
+
+
+
+//===============================================================
+// UDP transmit task.
+//===============================================================
+void DummyDetector::udp_tx_task( void *pvParameters )
+{
+    //==================================================
+    // This function definition is for reference only.
+    // A derived class must override.
+    throw std::runtime_error( __PRETTY_FUNCTION__
+        + " for reference only. Implement it for the derived class." );
+    //==================================================
+    
+    struct freertos_sockaddr dest_sock_addr;
+    socklen_t dest_sock_addr_leng = sizeof(xDestination);
+    int32_t bytesSent;
+
+    dest_sock_addr.sin_addr = FreeRTOS_inet_addr_quick( svr_ip_addr[3],
+                                                        svr_ip_addr[2],
+                                                        svr_ip_addr[1],
+                                                        svr_ip_addr[0] );
+    dest_sock_addr.sin_port = FreeRTOS_htons(UDP_PORT);
+
+    udp_tx_msg_t msg;
+    
+    while(1)
+    {
+        tx_msg_proc( msg );
+        tx_leng = FreeRTOS_sendto( udp_socket,
+                                   msg,
+                                   msg.leng + 4, // ID (2) + OP (2) + data
+                                   0,
+                                   &dest_sock_addr,
+                                   dest_sock_addr_leng );
+        if ( tx_leng <= 0 )
+        {
+            std::err << "Failed to send UDP message.\n";
+        }
+    }
 }
+//===============================================================
+
+

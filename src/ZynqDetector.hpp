@@ -40,18 +40,20 @@ protected:
     //------------------------------
     // UDP message
     //------------------------------
-    const int MAX_UDP_MSG_DATA_LENG = 
-    typedef struct {
+    const int MAX_UDP_MSG_DATA_LENG = 1024;
+    typedef struct
+    {
         uint16_t id;
         uint16_t op;
         uint32_t data[];
-    } udp_rx_msg_t;
+    } UDPRxMsg;
 
-    typedef struct {
+    typedef struct
+    {
         uint16_t id;
         uint16_t op;
         uint32_t data[];
-    } udp_rx_msg_t;
+    } UDPTxMsg;
 
     //------------------------------
     // Access request
@@ -70,7 +72,7 @@ protected:
         uint16_t instr_reg_addr;
         uint16_t data_reg_addr;
         uint32_t data;
-    } interface_single_access_req_t;
+    } PlInterfaceSingleAccessReq;
 
     typedef struct
     {
@@ -81,7 +83,7 @@ protected:
         uint16_t instr_reg_addr;
         uint16_t data_reg_addr;
         uint32_t data[4096/4 - 1];
-    } interface_multi_access_req_t;
+    } PlInterfaceMultiAccessReq;
 
     //------------------------------
     // Access response
@@ -96,14 +98,14 @@ protected:
     {
         uint8_t   op;
         uint32_t  data;
-    } interface_single_access_resp_t;
+    } PlInterfaceSingleAccessResp;
     
     typedef struct
     {
         uint8_t  op;
         uint32_t leng;
         uint32_t data[4096/4 - 1];
-    } interface_multi_access_resp_t;
+    } PlInterfaceMultiAccessResp;
 
     //------------------------------
     // Task parameter
@@ -113,21 +115,13 @@ protected:
         QueueHandle_t* reg_access_req_queue;
         QueueHandle_t* interface_single_access_req_queue;
         QueueHandle_t* interface_multi_access_req_queue;
-    } udp_rx_task_param_t;
+    } UDPRxTaskParam;
 
     typedef struct
     {
         QueueHandle_t* req_queue;
         QueueHandle_t* resp_queue;
-    } reg_access_task_param_t;
-
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-        void* read();
-        void* write();
-    } interface_single_access_task_param_t;
+    } SingleRegisterAccessTaskParam;
 
     typedef struct
     {
@@ -135,63 +129,70 @@ protected:
         QueueHandle_t* resp_queue;
         void* read();
         void* write();
-    } interface_multi_access_task_param_t;
+    } PlInterfaceSingleAccessTaskParam;
 
+    typedef struct
+    {
+        QueueHandle_t* req_queue;
+        QueueHandle_t* resp_queue;
+        void* read();
+        void* write();
+    } PlInterfaceMultiAccessTaskParam;
 
     //==================================================
     //                    Variables                   //
     //==================================================
     uint32_t base_addr_;
 
-
     //------------------------------
     // Message
     //------------------------------
-    std::unordered_map<int, std::function<void()>> instr_map_;
+    using InstructionHandler = std::function<void(std::any&)>;
+    std::map<int, InstructionHandler> instr_map_;
 
     //------------------------------
     // Interrupt
     //------------------------------
-    XScuGic gic;                               // Global Interrupt Controller
-    std::map<int, TaskHandle_t> irq_task_map;  // IRQ task map as an instance member
+    XScuGic gic_;                               // Global Interrupt Controller
+    std::map<int, TaskHandle_t> irq_task_map_;  // IRQ task map as an instance member
 
 
     //------------------------------
     // Queues
     //------------------------------
-    const size_t REG_ACCESS_REQ_QUEUE_LENG  = 100;
-    const size_t REG_ACCESS_RESP_QUEUE_SIZE = REG_ACCESS_RESP_QUEUE_LENG * sizeof(reg_access_resp_t);
-    const size_t REG_ACCESS_RESP_QUEUE_LENG = 100;
-    const size_t REG_ACCESS_RESP_QUEUE_SIZE = REG_ACCESS_RESP_QUEUE_LENG * sizeof(reg_access_resp_t);
+    const size_t SINGLE_REGISTER_ACCESS_REQ_QUEUE_LENG  = 100;
+    const size_t SINGLE_REGISTER_ACCESS_REQ_QUEUE_SIZE = SINGLE_REGISTER_ACCESS_REQ_QUEUE_LENG * sizeof( SingleRegisterAccessReq );
+    const size_t SINGLE_REGISTER_ACCESS_RESP_QUEUE_LENG = 100;
+    const size_t SINGLE_REGISTER_ACCESS_RESP_QUEUE_SIZE = SINGLE_REGISTER_ACCESS_RESP_QUEUE_LENG * sizeof( SingleRegisterAccessResp );
 
-    const size_t INTERFACE_SINGLE_ACCESS_REQ_QUEUE_LENG  = 10;
-    const size_t INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE = INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG * sizeof(interface_single_access_resp_t);
-    const size_t INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG = 10;
-    const size_t INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE = INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG * sizeof(interface_single_access_resp_t);
+    const size_t PL_INTERFACE_SINGLE_ACCESS_REQ_QUEUE_LENG  = 10;
+    const size_t PL_INTERFACE_SINGLE_ACCESS_REQ_QUEUE_SIZE = PL_INTERFACE_SINGLE_ACCESS_REQ_QUEUE_LENG * sizeof( PlInterfaceSingleAccessReq );
+    const size_t PL_INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG = 10;
+    const size_t PL_INTERFACE_SINGLE_ACCESS_RESP_QUEUE_SIZE = PL_INTERFACE_SINGLE_ACCESS_RESP_QUEUE_LENG * sizeof( PlInterfaceMultiAccessResp );
 
-    const size_t INTERFACE_MULTI_ACCESS_REQ_QUEUE_LENG  = 5;
-    const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG * sizeof(interface_multi_access_resp_t);
-    const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG = 5;
-    const size_t INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG * sizeof(interface_multi_access_resp_t);
+    const size_t PL_INTERFACE_MULTI_ACCESS_REQ_QUEUE_LENG  = 5;
+    const size_t PL_INTERFACE_MULTI_ACCESS_REQ_QUEUE_SIZE = PL_INTERFACE_MULTI_ACCESS_REQ_QUEUE_LENG * sizeof( PlInterfaceSingleAccessReq );
+    const size_t PL_INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG = 5;
+    const size_t PL_INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = PL_INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG * sizeof( PlInterfaceMultiAccessResp );
 
-    QueueSetMemberHandle_t active_resp_queue;
-    QueueSetHandle_t resp_queue_set;
+    QueueSetMemberHandle_t active_resp_queue_;
+    QueueSetHandle_t resp_queue_set_;
 
     
     //------------------------------
     // Task handlers
     //------------------------------
-    TaskHandle_t  udp_rx_task_handle;
-    TaskHandle_t  udp_tx_task_handle;
-    TaskHandle_t  fast_access_task_handle;
-    TaskHandle_t  slow_access_task_handle;
+    TaskHandle_t  udp_rx_task_handle_;
+    TaskHandle_t  udp_tx_task_handle_;
+    TaskHandle_t  fast_access_task_handle_;
+    TaskHandle_t  slow_access_task_handle_;
         
-    QueueHandle_t reg_access_req_queue               = NULL;
-    QueueHandle_t reg_access_req_queue               = NULL;
-    QueueHandle_t interface_single_access_req_queue  = NULL;
-    QueueHandle_t interface_single_access_resp_queue = NULL;
-    QueueHandle_t interface_multi_access_req_queue   = NULL;
-    QueueHandle_t interface_multi_access_resp_queue  = NULL;
+    QueueHandle_t reg_access_req_queue_               = NULL;
+    QueueHandle_t reg_access_req_queue_               = NULL;
+    QueueHandle_t interface_single_access_req_queue_  = NULL;
+    QueueHandle_t interface_single_access_resp_queue_ = NULL;
+    QueueHandle_t interface_multi_access_req_queue_   = NULL;
+    QueueHandle_t interface_multi_access_resp_queue_  = NULL;
 
     
     //------------------------------
@@ -201,21 +202,20 @@ protected:
     const uint16_t MAX_UDP_MSG_LENG = 4096;
     const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
 
-    uint8_t ip_addr[4];
-    uint8_t netmask[4];
-    uint8_t gateway[4];
-    uint8_t dns[4];
-    uint8_t mac_addr[6];
+    uint8_t ip_addr_[4];
+    uint8_t netmask_[4];
+    uint8_t gateway_[4];
+    uint8_t dns_[4];
+    uint8_t mac_addr_[6];
     const uint32_t UDP_PORT = 25913;
 
-    std::atomic<bool> svr_ip_addr_lock {false};
-    uint8_t svr_ip_addr[4];
+    std::atomic<bool> svr_ip_addr_lock_ {false};
+    uint8_t svr_ip_addr_[4];
 
-    int32_t udp_socket;
+    int32_t udp_socket_;
 
-    TimerHandle_t xPollTimer = NULL;
-
-    std::vector<uint32_t> poll_list{};  // PVs to be polled
+    TimerHandle_t xPollTimer_ = NULL;
+    std::vector<uint32_t> poll_list_{};  // PVs to be polled
 
 
     //==================================================
@@ -224,13 +224,14 @@ protected:
     //------------------------------
     // Interrupt
     //------------------------------
-    virtual static void ISR_Wrapper(void* context) = 0;
+    virtual static void ISR_wrapper(void* context) = 0;
 
 
     //------------------------------
     // Interrupt
     //------------------------------
     virtual void initialize_instr_map() = 0;
+    virtual void isr_handler() = 0;
 
     //------------------------------
     // Network
@@ -238,16 +239,32 @@ protected:
     bool string_to_addr( const std::string& addr_str, uint8_t* addr );
     void read_network_config( const std::string& filename );
 
+    //------------------------------
+    // Task
+    //------------------------------
     virtual void udp_rx_task( void *pvParameters );
-    virtual void udp_tx_task( void *pvParameters );
+    virtual void udp_tx_task( void *pvParameters ) = 0;
 
-    virtual void single_reg_access( udp_msg_t& msg );
+    virtual void single_register_access_task();
+    virtual void pl_if_single_access_task( void *pvParameters ) = 0;
+    virtual void pl_if_multi_access_task()( void *pvParameters ) = 0;
+
+    //------------------------------
+    // Message
+    //------------------------------
+    void rx_msg_proc( std::any& msg );
+    void single_reg_acc_req_proc( udp_rx_msg_t& msg )
+
+    //------------------------------
+    // General
+    //------------------------------
+    void must_override();
 
     // Set failure number to register.
     void set_fail_num( uint32_t fail_num );
 
     template <typename T>
-    void ZynqDetector::report_err( const std::string& s, T err_code, uint32_t fail_num );
+    void report_error( const std::string& s, T err_code, uint32_t fail_num );
     //==================================================
 
 public:
@@ -255,21 +272,10 @@ public:
     ZynqDetector( uint32_t base_addr );
     ~ZynqDetector();
 
-    virtual void isr_handler() = 0;
-    virtual void register_isr() = 0;
     void DummyDetector::create_irq_task_map();
-
-    using InstructionHandler = std::function<void(std::any&)>;
-    std::map<int, InstructionHandler> instr_map_;
     
     void network_init();
+    virtual void interrupt_init() = 0;
     virtual void queue_init();
     virtual void task_init();
-
-    template <typename T>
-    void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail_num );
-
-    virtual void single_reg_acc_req_proc( udp_rx_msg_t& msg );
-
-
 };
