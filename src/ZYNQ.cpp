@@ -8,7 +8,7 @@
 #include <unistd.h> // For close()
 #endif
 
-#include "FPGA.hpp"
+#include "ZYNQ.hpp"
 
 
 
@@ -85,19 +85,19 @@ void Interface::wait_for_completion()
 
 
 //-----------------------------------------
-FPGA::FPGA( Register& reg )
+ZYNQ::ZYNQ( Register& reg )
     : reg_( reg )
 {}
 
 
-void FPGA::add_i2c_interface( const std::string& name, uint32_t instr_reg, uint32_t data_reg)
+void ZYNQ::add_i2c_interface( const std::string& name, uint32_t instr_reg, uint32_t data_reg)
 {
     i2c_interfaces_.emplace( std::piecewise_construct,
                              std::forward_as_tuple( name ),
                              std::forward_as_tuple( reg_, instr_reg, data_reg ) );
 }
 
-void FPGA::add_spi_interface( const std::string& name,
+void ZYNQ::add_spi_interface( const std::string& name,
                               uint32_t instr_reg,
                               uint32_t data_reg )
 {
@@ -106,13 +106,13 @@ void FPGA::add_spi_interface( const std::string& name,
                              std::forward_as_tuple( reg_, instr_reg, data_reg ) );
 }
 
-I2CInterface* FPGA::get_i2c_interface( const std::string& name )
+I2CInterface* ZYNQ::get_i2c_interface( const std::string& name )
 {
     auto it = i2c_interfaces_.find( name );
     return ( it != i2c_interfaces_.end() ) ? &(it->second) : nullptr;
 }
 
-SPIInterface* FPGA::get_spi_interface(const std::string& name)
+SPIInterface* ZYNQ::get_spi_interface(const std::string& name)
 {
     auto it = spi_interfaces_.find( name );
     return ( it != spi_interfaces_.end() ) ? &(it->second) : nullptr;
@@ -127,7 +127,7 @@ SPIInterface* FPGA::get_spi_interface(const std::string& name)
 //=========================================
 // Definitions for Linux
 //=========================================
-FPGA::FPGA(uint32_t axi_base_addr)
+ZYNQ::ZYNQ(uint32_t axi_base_addr)
     : axi_base_addr( axi_base_addr )
     , reg( nullptr )
     , reg_size( 0x10000 )
@@ -162,25 +162,25 @@ FPGA::FPGA(uint32_t axi_base_addr)
     }
 
     trace_reg( __func__,
-               ": FPGA object created at 0x",
+               ": ZYNQ object created at 0x",
                std::hex, static_cast<void*>(reg), std::dec
              );
 }
 
 //-----------------------------------------
 
-FPGA::~FPGA()
+ZYNQ::~ZYNQ()
 {
     if (reg != nullptr)
     {
         munmap(reg, reg_size);
     }
-    trace_reg( __func__, ": FPGA object destructed." );
+    trace_reg( __func__, ": ZYNQ object destructed." );
 }
 
 //-----------------------------------------
 
-void FPGA::reg_wr(size_t offset, uint32_t value)
+void ZYNQ::reg_wr(size_t offset, uint32_t value)
 {
     if (offset % sizeof(uint32_t) != 0) {
         throw std::runtime_error("Offset must be aligned to register size");
@@ -205,7 +205,7 @@ void FPGA::reg_wr(size_t offset, uint32_t value)
 
 //-----------------------------------------
 
-uint32_t FPGA::reg_rd(size_t offset)
+uint32_t ZYNQ::reg_rd(size_t offset)
 {
     uint32_t val;
     if (offset % sizeof(uint32_t) != 0)
