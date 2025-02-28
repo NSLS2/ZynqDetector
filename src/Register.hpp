@@ -2,9 +2,6 @@
 
 
 
-//=========================================
-// Register class
-//=========================================
 class Register
 {
 public:
@@ -17,4 +14,3 @@ private:
     uintptr_t base_addr_;
     SemaphoreHandle_t mutex_;
 };
-//=========================================
