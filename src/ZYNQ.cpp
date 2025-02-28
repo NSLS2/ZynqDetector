@@ -8,6 +8,7 @@
 #include <unistd.h> // For close()
 #endif
 
+#include "Register.hpp"
 #include "ZYNQ.hpp"
 
 
@@ -16,74 +17,6 @@
 // Definitions for FreeRTOS
 //###################################################
 #ifdef __FREERTOS__
-
-
-
-//=========================================
-// Register class
-//=========================================
-Register::Register( uintptr_t base_addr )
-{
-    base_addr_ = reinterpret_cast<volatile uint32_t*>( base_addr );
-}
-
-void Register::write( uint32_t offset, uint32_t value )
-{
-    if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
-    {
-        *(volatile uint32_t*)(base_addr_ + offset/4) = value;
-        xSemaphoreGive( mutex_ );
-    }
-}
-    
-uint32_t Register::read( uint32_t offset )
-{
-    uint32_t value = 0;
-    if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
-    {
-        value = *(volatile uint32_t*)(base_addr_ + offset/4);
-        xSemaphoreGive( mutex_ );
-    }
-    return value;
-}
-//=========================================
-
-
-//=========================================
-// Interface class
-//=========================================
-Interface::Interface( Register& reg
-                    , uint32_t config_reg
-                    , uint32_t instr_reg
-                    , uint32_t data_reg
-                    , uint32_t baud_rate
-                    )
-    : reg_        ( reg       )
-    , instr_reg_  ( instr_reg )
-    , data_reg_   ( data_reg  )
-    , baud_rate_  ( baud_rate )
-{}
-
-void Interface::write( uint32_t instr, uint32_t data )
-{
-    reg_.write( data_reg_, data );
-    reg_.write( instr_reg_, instr );
-    wait_for_completion();
-}
-
-uint32_t Interface::read( uint32_t instr, uint32_t data )
-{
-    reg_.write( data_reg_, data );
-    reg_.write( instr_reg_, instr );
-    wait_for_completion();
-    return reg_.read( data_reg_ );    // Read data
-}
-
-void Interface::wait_for_completion()
-{
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);  // Wait indefinitely for ISR notification
-}
-//=========================================
 
 
 //-----------------------------------------
