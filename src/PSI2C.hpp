@@ -2,8 +2,9 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "xiicps.h" // Include the Xilinx I2C driver header
-#include "xparameters.h" // Include hardware parameters
+#include "semphr.h"
+#include "xiicps.h"
+#include "xparameters.h"
 
 #define I2C0_DEVICE_ID XPAR_XIICPS_0_DEVICE_ID // or use the base address if no device ID
 #define I2C1_DEVICE_ID XPAR_XIICPS_1_DEVICE_ID // or use the base address if no device ID
@@ -18,8 +19,8 @@
 class PSI2C
 {
 private:
-    XIicPs_Config *ConfigPtr_;
-    XIicPs *IicPsPtr_;
+    XIicPs_Config *i2cps_config_ptr_;
+    XIicPs i2c_ps_;
 
     uint8_t  bus_index_;
     uint32_t base_address_;
