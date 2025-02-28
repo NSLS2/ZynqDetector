@@ -1,11 +1,5 @@
-
-#include <iostream>
-
-#include "FreeRTOS.h"
-#include "task.h"
-#include "xiicps.h" // Include the Xilinx I2C driver header
-#include "xparameters.h" // Include hardware parameters
-
+//#include <iostream>
+#include <stdio.h>
 #include "PSI2C.hpp"
 
 PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
@@ -20,30 +14,32 @@ PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
     }
 
     // Initialize I2C
-    ConfigPtr_ = XIicPs_LookupConfig( base_address_ );
-    if ( ConfigPtr_ == NULL )
+    i2cps_config_ptr_ = XIicPs_LookupConfig( base_address_ );
+    if ( i2cps_config_ptr_ == NULL )
     {
-        std::cout << "I2C " << bus_index << " lookup config failed\n";
-        vTaskDelete(NULL);
+        printf("I2C %d: lookup config failed\n", bus_index_ );
+        //std::cout << "I2C " << bus_index << " lookup config failed\n";
     }
     return;
 
-    int status = XIicPs_CfgInitialize( &IicPs_, ConfigPtr_, ConfigPtr_->BaseAddress );
+    int status = XIicPs_CfgInitialize( &i2c_ps_, i2cps_config_ptr_, i2cps_config_ptr_->BaseAddress );
     if ( status != XST_SUCCESS )
     {
-        std::cout << "I2C " << bus_index << " config initialization failed\n";
+        //std::cout << "I2C " << bus_index << " config initialization failed\n";
+        printf("I2C %d: config initialization failed\n", bus_index_ );
     }
     return;
     
     // Self Test
-    status = XIicPs_SelfTest( &IicPs_ );
+    status = XIicPs_SelfTest( &i2c_ps_ );
     if ( status != XST_SUCCESS )
     {
-        std::cout << "I2C " << bus_index << " self-test failed\n";
+        //std::cout << "I2C " << bus_index << " self-test failed\n";
+        printf("I2C %d: self-test failed failed\n", bus_index_);
     }
 
     // Set clock frequency
-    XIicPs_SetSClk( &IicPs_, I2C_CLOCK_FREQUENCY );
+    XIicPs_SetSClk( &i2c_ps_, I2C_CLOCK_FREQUENCY );
 }
 
 //=========================================
@@ -51,17 +47,18 @@ PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
 //=========================================
 int PSI2C::send( char* buffer, uint16_t length, uint16_t slave_address )
 {
-    int status;
+    int status = XST_SUCCESS;
 
     if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
     {
-        status = XIicPs_MasterSendPolled( &IicPs_, buffer, sizeof(length), slave_address );
+        status = XIicPs_MasterSendPolled( &i2c_ps_, (u8*)buffer, length, slave_address );
         xSemaphoreGive( mutex_ );
-    }
 
-    if (status != XST_SUCCESS)
-    {
-        std::cout << "I2C " << bus_index_ << " failed to send\n";
+        if (status != XST_SUCCESS)
+        {
+            //std::cout << "I2C " << bus_index_ << " failed to send\n";
+            printf("I2C %d: failed to send\n", bus_index_);
+        }
     }
 
     return status;
@@ -72,17 +69,18 @@ int PSI2C::send( char* buffer, uint16_t length, uint16_t slave_address )
 //=========================================
 int PSI2C::receive( char* buffer, uint16_t length, uint16_t slave_address ) 
 {
-    int status;
+    int status = XST_SUCCESS;
 
     if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
     {
-        status = XIicPs_MasterRecvPolled( &IicPs_, buffer, length, slave_address);
+        status = XIicPs_MasterRecvPolled( &i2c_ps_, (u8*)buffer, length, slave_address );
         xSemaphoreGive( mutex_ );
-    }
-
-    if (status != XST_SUCCESS)
-    {
-        std::cout << "I2C " << bus_index_ << " failed to receive\n";
+        
+        if (status != XST_SUCCESS)
+        {
+            //std::cout << "I2C " << bus_index_ << " failed to receive\n";
+            printf("I2C %d: failed to receive\n", bus_index_);
+        }
     }
     
     return status;
