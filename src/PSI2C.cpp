@@ -46,19 +46,40 @@ PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
     XIicPs_SetSClk( &IicPs_, I2C_CLOCK_FREQUENCY );
 }
 
+//=========================================
+// Send to I2C bus.
+//=========================================
 int PSI2C::send( char* buffer, uint16_t length, uint16_t slave_address )
 {
-    int status = XIicPs_MasterSendPolled( &IicPs_, buffer, sizeof(length), slave_address );
+    int status;
+
+    if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
+    {
+        status = XIicPs_MasterSendPolled( &IicPs_, buffer, sizeof(length), slave_address );
+        xSemaphoreGive( mutex_ );
+    }
+
     if (status != XST_SUCCESS)
     {
         std::cout << "I2C " << bus_index_ << " failed to send\n";
     }
+
     return status;
 }
 
+//=========================================
+// Receive from I2C bus.
+//=========================================
 int PSI2C::receive( char* buffer, uint16_t length, uint16_t slave_address ) 
 {
-    int status = XIicPs_MasterRecvPolled( &IicPs_, buffer, length, slave_address);
+    int status;
+
+    if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
+    {
+        status = XIicPs_MasterRecvPolled( &IicPs_, buffer, length, slave_address);
+        xSemaphoreGive( mutex_ );
+    }
+
     if (status != XST_SUCCESS)
     {
         std::cout << "I2C " << bus_index_ << " failed to receive\n";

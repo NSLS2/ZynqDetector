@@ -24,6 +24,8 @@ private:
     uint8_t  bus_index_;
     uint32_t base_address_;
 
+    SemaphoreHandle_t mutex_;
+
 public:
     PSI2C( uint8_t bus_index );
     int send( char* buffer, uint16_t length, uint16_t slave_address );
