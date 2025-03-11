@@ -25,32 +25,41 @@ ZYNQ::ZYNQ( Register& reg )
 {}
 
 
-void ZYNQ::add_i2c_interface( const std::string& name, uint32_t instr_reg, uint32_t data_reg)
+void ZYNQ::add_pl_i2c_interface( const std::string& name
+                               , uint32_t instr_reg
+                               , uint32_t data_reg )
 {
-    i2c_interfaces_.emplace( std::piecewise_construct,
-                             std::forward_as_tuple( name ),
-                             std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+    pl_i2c_interfaces_.emplace( std::piecewise_construct,
+                                std::forward_as_tuple( name ),
+                                std::forward_as_tuple( reg_, instr_reg, data_reg ) );
 }
 
-void ZYNQ::add_spi_interface( const std::string& name,
-                              uint32_t instr_reg,
-                              uint32_t data_reg )
+void ZYNQ::add_pl_spi_interface( const std::string& name
+                               , uint32_t instr_reg
+                               , uint32_t data_reg )
 {
-    spi_interfaces_.emplace( std::piecewise_construct,
-                             std::forward_as_tuple( name ),
-                             std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+    pl_spi_interfaces_.emplace( std::piecewise_construct
+                              , std::forward_as_tuple( name )
+                              , std::forward_as_tuple( reg_, instr_reg, data_reg ) );
 }
 
-I2CInterface* ZYNQ::get_i2c_interface( const std::string& name )
+void ZYNQ::add_ps_i2c_interface( const std::string& name )
 {
-    auto it = i2c_interfaces_.find( name );
-    return ( it != i2c_interfaces_.end() ) ? &(it->second) : nullptr;
+    ps_i2c_interfaces_.emplace( std::piecewise_construct
+                              , std::forward_as_tuple( name )
+                              , std::forward_as_tuple( reg_, instr_reg, data_reg ) );
 }
 
-SPIInterface* ZYNQ::get_spi_interface(const std::string& name)
+I2CInterface* ZYNQ::get_pl_i2c_interface( const std::string& name )
 {
-    auto it = spi_interfaces_.find( name );
-    return ( it != spi_interfaces_.end() ) ? &(it->second) : nullptr;
+    auto it = pl_i2c_interfaces_.find( name );
+    return ( it !=pl_ i2c_interfaces_.end() ) ? &(it->second) : nullptr;
+}
+
+SPIInterface* ZYNQ::get_pl_spi_interface(const std::string& name)
+{
+    auto it = pl_spi_interfaces_.find( name );
+    return ( it != pl_spi_interfaces_.end() ) ? &(it->second) : nullptr;
 }
 
 //=========================================
@@ -76,16 +85,17 @@ ZYNQ::ZYNQ(uint32_t axi_base_addr)
     try
     {
         //reg_size = getpagesize();
-        reg = static_cast<uint32_t *>( mmap( nullptr, reg_size,
-                                             PROT_READ | PROT_WRITE,
-                                             MAP_SHARED,
-                                             fd,
-                                             axi_base_addr));
+        reg = static_cast<uint32_t *>( mmap( nullptr
+                                           , reg_size
+                                           , PROT_READ | PROT_WRITE
+                                           , MAP_SHARED
+                                           , fd
+                                           , axi_base_addr ) );
     }
     catch (const std::exception& e)
     {
         close(fd);
-        throw std::runtime_error("Memory mapping failed: " + std::string(e.what()));
+        throw std::runtime_error( "Memory mapping failed: " + std::string( e.what())  );
     }
 
 
@@ -93,13 +103,12 @@ ZYNQ::ZYNQ(uint32_t axi_base_addr)
     
     if(reg == MAP_FAILED)
     {
-        throw std::runtime_error("Memory mapping failed");
+        throw std::runtime_error( "Memory mapping failed" );
     }
 
-    trace_reg( __func__,
-               ": ZYNQ object created at 0x",
-               std::hex, static_cast<void*>(reg), std::dec
-             );
+    trace_reg( __func__
+             , ": ZYNQ object created at 0x"
+             , std::hex, static_cast<void*>(reg), std::dec );
 }
 
 //-----------------------------------------
@@ -108,14 +117,14 @@ ZYNQ::~ZYNQ()
 {
     if (reg != nullptr)
     {
-        munmap(reg, reg_size);
+        munmap( reg, reg_size );
     }
     trace_reg( __func__, ": ZYNQ object destructed." );
 }
 
 //-----------------------------------------
 
-void ZYNQ::reg_wr(size_t offset, uint32_t value)
+void ZYNQ::reg_wr( size_t offset, uint32_t value )
 {
     if (offset % sizeof(uint32_t) != 0) {
         throw std::runtime_error("Offset must be aligned to register size");

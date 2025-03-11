@@ -30,12 +30,15 @@ private:
     Register reg_;
     std::map<std::string, PLI2CInterface> pl_i2c_interfaces_;
     std::map<std::string, PLSPIInterface> pl_spi_interfaces_;
+    std::map<std::string, PSI2CInterface> pl_i2c_interfaces_;
 
 public:
     ZYNQ( uintptr_t base_addr );
 
     void add_pl_i2c_interface( const std::string& name, uint32_t instr_reg, uint32_t data_reg );
     void add_pl_spi_interface( const std::string& name, uint32_t instr_reg, uint32_t data_reg );
+
+    void add_ps_i2c_interface( const std::string& name  );
 
     PLI2CInterface* get_pl_i2c_interface( const std::string& name );
     PLSPIInterface* get_pl_spi_interface( const std::string& name );
