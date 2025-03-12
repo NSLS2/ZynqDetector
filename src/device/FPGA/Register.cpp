@@ -31,4 +31,5 @@ uint32_t Register::read( uint32_t offset )
     }
     return value;
 }
+
 //=========================================

@@ -178,14 +178,6 @@ protected:
     QueueSetMemberHandle_t active_resp_queue_;
     QueueSetHandle_t resp_queue_set_;
 
-    
-    //------------------------------
-    // Task handlers
-    //------------------------------
-    TaskHandle_t  udp_rx_task_handle_;
-    TaskHandle_t  udp_tx_task_handle_;
-    TaskHandle_t  fast_access_task_handle_;
-    TaskHandle_t  slow_access_task_handle_;
         
     QueueHandle_t reg_access_req_queue_               = NULL;
     QueueHandle_t reg_access_req_queue_               = NULL;
@@ -193,12 +185,20 @@ protected:
     QueueHandle_t interface_single_access_resp_queue_ = NULL;
     QueueHandle_t interface_multi_access_req_queue_   = NULL;
     QueueHandle_t interface_multi_access_resp_queue_  = NULL;
+    
+    //------------------------------
+    // Task handlers
+    //------------------------------
+    TaskHandle_t  udp_rx_task_handle_;
+    TaskHandle_t  udp_tx_task_handle_;
+    TaskHandle_t  fast_access_task_handle_;
+    //TaskHandle_t  slow_access_task_handle_;
 
     
     //------------------------------
     // Network
     //------------------------------
-
+    const uint32_t UDP_PORT = 25913;
     const uint16_t MAX_UDP_MSG_LENG = 4096;
     const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
 
@@ -207,7 +207,6 @@ protected:
     uint8_t gateway_[4];
     uint8_t dns_[4];
     uint8_t mac_addr_[6];
-    const uint32_t UDP_PORT = 25913;
 
     std::atomic<bool> svr_ip_addr_lock_ {false};
     uint8_t svr_ip_addr_[4];
@@ -217,6 +216,7 @@ protected:
     TimerHandle_t xPollTimer_ = NULL;
     std::vector<uint32_t> poll_list_{};  // PVs to be polled
 
+    Logger logger;
 
     //==================================================
     //                    Functions                   //
@@ -260,8 +260,8 @@ protected:
     //------------------------------
     void must_override();
 
-    // Set failure number to register.
-    void set_fail_num( uint32_t fail_num );
+    // Write status code to register.
+    void set_status( uint32_t status );
 
     template <typename T>
     void report_error( const std::string& s, T err_code, uint32_t fail_num );

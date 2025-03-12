@@ -54,6 +54,7 @@ static StaticQueue_t xStaticQueue;
 ZynqDetector::ZynqDetector( uint32_t base_addr )
     : base_addr_( base_addr )
 {}
+/*
 //===============================================================
 
 //===============================================================
@@ -91,13 +92,17 @@ ZynqDetector::ZynqDetector( void )
 	for( ;; );
 }
 //===============================================================
+*/
+
 
 void ZynqDetector::must_override()
 {
-    std::cout << __PRETTY_FUNCTION__
-        << " for reference only. Implement it for the specific detector.\n" );
+    //std::cout << __PRETTY_FUNCTION__
+    //    << " for reference only. Implement it for the specific detector.\n" );
+    log_error("For reference only. Implement it for the specific detector.\n" );
     exit();
 }
+
 
 //===============================================================
 // Network initialization.
@@ -275,18 +280,18 @@ void ZynqDetector::read_network_config( const std::string& filename )
 //  Single register access.
 //  Assembles fast access request and sends it to the queue.
 //===============================================================
-void ZynqDetector::single_reg_acc_req_proc( udp_rx_msg_t& msg )
+void ZynqDetector::single_register_access_request_process( udp_rx_msg_t& msg )
 {
     fast_access_req_t req;
     req.op   = msg->op;
     req.data = msg->data;
-    xQueueSend( fast_access_req_queue_,
+    xQueueSend( single_register_access_request_queue,
             	req,
                 0UL );
 }
 //===============================================================
 
-/*
+
 //===============================================================
 // This task performs single register read/write operation.
 //===============================================================
@@ -317,7 +322,7 @@ void ZynqDetector::reg_access_task( void *pvParameters )
     }
 }
 //===============================================================
-*/
+
 
 //===============================================================
 // This task performs single register read/write operation.

@@ -1,6 +1,7 @@
 // C++ includes
 #include <iterator>
 #include <portmacro.h>
+#include <memory>
 // FreeRTOS includes
 #include "FreeRTOS.h"
 #include "msg.hpp"
@@ -82,6 +83,11 @@ GeDetector::GeDetector()
     instr_map_[WR_UDP_IP_ADDR]     = [this](udp_rx_msg_t msg){ proc_udp_ip_addr( msg ); };
     instr_map_[RD_EVENT_FIFO_CNT]  = [this](udp_rx_msg_t msg){ proc_event_fifo_cnt( msg ); };
     instr_map_[RD_EVENT_FIFO_DATA] = [this](udp_rx_msg_t msg){ proc_event_fifo_data( msg ); };
+
+    // Create interfaces
+
+    ps_i2c0_ = std::make_shared<PSI2C>("I2C0");
+    ps_i2c1_ = std::make_shared<PSI2C>("I2C1");
 }
 
 
@@ -89,7 +95,7 @@ GeDetector::GeDetector()
 //===============================================================
 //  EVENT_FIFO_CTRL
 //===============================================================
-void proc_event_fifo_ctrl( udp_rx_msg_t& msg )
+void proc_event_fifo_ctrl( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -98,7 +104,7 @@ void proc_event_fifo_ctrl( udp_rx_msg_t& msg )
 //===============================================================
 //  DETECTOR_TYPE
 //===============================================================
-void proc_detector_type( udp_rx_msg_t& msg )
+void proc_detector_type( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -107,7 +113,7 @@ void proc_detector_type( udp_rx_msg_t& msg )
 //===============================================================
 //  MARS_RDOUT_ENB
 //===============================================================
-void proc_mars_rdout_enb( udp_rx_msg_t& msg )
+void proc_mars_rdout_enb( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -116,7 +122,7 @@ void proc_mars_rdout_enb( udp_rx_msg_t& msg )
 //===============================================================
 //  TRIG
 //===============================================================
-void proc_trig( udp_rx_msg_t& msg )
+void proc_trig( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -125,7 +131,7 @@ void proc_trig( udp_rx_msg_t& msg )
 //===============================================================
 //  FRAME_NO
 //===============================================================
-void proc_frame_no( udp_rx_msg_t& msg )
+void proc_frame_no( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -134,7 +140,7 @@ void proc_frame_no( udp_rx_msg_t& msg )
 //===============================================================
 //  COUNT_TIME_LO
 //===============================================================
-void proc_count_time_lo( udp_rx_msg_t& msg )
+void proc_count_time_lo( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -143,7 +149,7 @@ void proc_count_time_lo( udp_rx_msg_t& msg )
 //===============================================================
 //  COUNT_TIME_HI
 //===============================================================
-void proc_count_time_hi( udp_rx_msg_t& msg )
+void proc_count_time_hi( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -152,7 +158,7 @@ void proc_count_time_hi( udp_rx_msg_t& msg )
 //===============================================================
 //  MARS_CONF_LOAD
 //===============================================================
-void proc_mars_conf_load( udp_rx_msg_t& msg )
+void proc_mars_conf_load( const udp_rx_msg_t& msg )
 {
     ( msg );
 }
@@ -161,7 +167,7 @@ void proc_mars_conf_load( udp_rx_msg_t& msg )
 //===============================================================
 //  ADC_SPI
 //===============================================================
-void proc_adc_spi( udp_rx_msg_t& msg )
+void proc_adc_spi( const udp_rx_msg_t& msg )
 {
     ( msg );
 }
@@ -170,7 +176,7 @@ void proc_adc_spi( udp_rx_msg_t& msg )
 //===============================================================
 //  VERSIONREG
 //===============================================================
-void proc_versionreg( udp_rx_msg_t& msg )
+void proc_versionreg( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -179,7 +185,7 @@ void proc_versionreg( udp_rx_msg_t& msg )
 //===============================================================
 //  MARS_PIPE_DELAY
 //===============================================================
-void proc_mars_pipe_delay( udp_rx_msg_t& msg )
+void proc_mars_pipe_delay( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -188,7 +194,7 @@ void proc_mars_pipe_delay( udp_rx_msg_t& msg )
 //===============================================================
 //  TD_CAL
 //===============================================================
-void proc_td_cal( udp_rx_msg_t& msg )
+void proc_td_cal( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -197,7 +203,7 @@ void proc_td_cal( udp_rx_msg_t& msg )
 //===============================================================
 //  COUNT_MODE
 //===============================================================
-void proc_count_mode( udp_rx_msg_t& msg )
+void proc_count_mode( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -206,7 +212,7 @@ void proc_count_mode( udp_rx_msg_t& msg )
 //===============================================================
 //  CALPULSE_RATE
 //===============================================================
-void proc_calpuse_rate( udp_rx_msg_t& msg )
+void proc_calpuse_rate( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -215,7 +221,7 @@ void proc_calpuse_rate( udp_rx_msg_t& msg )
 //===============================================================
 //  CALPULSE_WIDTH
 //===============================================================
-void proc_calpulse_width( udp_rx_msg_t& msg )
+void proc_calpulse_width( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -224,7 +230,7 @@ void proc_calpulse_width( udp_rx_msg_t& msg )
 //===============================================================
 //  CALPULSE_CNT
 //===============================================================
-void proc_calpulse_cnt( udp_rx_msg_t& msg )
+void proc_calpulse_cnt( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -233,7 +239,7 @@ void proc_calpulse_cnt( udp_rx_msg_t& msg )
 //===============================================================
 //  MARS_CALPULSE
 //===============================================================
-void proc_mars_calpulse( udp_rx_msg_t& msg )
+void proc_mars_calpulse( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -242,7 +248,7 @@ void proc_mars_calpulse( udp_rx_msg_t& msg )
 //===============================================================
 //  CALPULSE_MODE
 //===============================================================
-void proc_calpulse_mode( udp_rx_msg_t& msg )
+void proc_calpulse_mode( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -251,7 +257,7 @@ void proc_calpulse_mode( udp_rx_msg_t& msg )
 //===============================================================
 //  UDP_IP_ADDR
 //===============================================================
-void proc_udp_ip_addr( udp_rx_msg_t& msg )
+void proc_udp_ip_addr( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }
@@ -260,7 +266,7 @@ void proc_udp_ip_addr( udp_rx_msg_t& msg )
 //===============================================================
 //  EVENT_FIFO_CNT
 //===============================================================
-void proc_event_fifo_cnt( udp_rx_msg_t& msg )
+void proc_event_fifo_cnt( const udp_rx_msg_t& msg )
 {
     single_reg_acc_req_proc( msg );
 }

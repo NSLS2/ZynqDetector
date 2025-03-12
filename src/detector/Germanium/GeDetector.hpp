@@ -78,9 +78,21 @@ private:
         { LEDS, [this]() { this->load_mars_conf(); }
         { LEDS, [this]() { this->load_mars_conf(); }
       }
+
+    LTC2309 ltc2309_;
+    DAC7678 dac7678_;
+    TMP100  tpm100_0_;
+    TMP100  tpm100_1_;
+    TMP100  tpm100_2_;
+
+    PSI2C psi2c_0;
+    PSI2C psi2c_0;
+
+    PSXADC psxadc_;
+
     void greate_tasks();
     
-    void rx_msg_proc( udt_msg_t udp_msg );
+    void rx_msg_proc( const udt_msg_t& udp_msg ) ;
     void tx_msg_proc();
     
 public:

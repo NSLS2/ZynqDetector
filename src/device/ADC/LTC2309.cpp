@@ -2,7 +2,7 @@
 
 LTC2309：：LTC2309( uint8_t i2c_addr
                  , bool is_single_ended
-                 , psi2c_req_queue
+                 , QueueHandle_t req_queue,
                  , std::map<int, char> chan_assign)
     : i2c_addr_(i2c_addr)
     , signle( is_single_ended ? 0x8 : 0 )
