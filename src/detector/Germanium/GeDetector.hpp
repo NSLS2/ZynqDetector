@@ -51,9 +51,23 @@ struct germ_udp_msg_t
     uint32_t data;
 };
 
-class GeRM: public ZynqDetector{
+class Germanium : public ZynqDetector<Germanium>
+{
 private:
+    const uint32_t base_addr_ = 0x43C00000;
 
+    LTC2309 ltc2309_;
+    DAC7678 dac7678_;
+    TMP100  tpm100_0_;
+    TMP100  tpm100_1_;
+    TMP100  tpm100_2_;
+    PSI2C psi2c_0;
+    PSI2C psi2c_1;
+    PSXADC psxadc_;
+
+    TaskHandle_t  psi2c_0_task_handler_;
+    TaskHandle_t  psi2c_1_task_handler_;
+    TaskHandle_t  psxadc_task_handler_;
 
     //======================================
     // Instruction map
@@ -79,22 +93,24 @@ private:
         { LEDS, [this]() { this->load_mars_conf(); }
       }
 
-    LTC2309 ltc2309_;
-    DAC7678 dac7678_;
-    TMP100  tpm100_0_;
-    TMP100  tpm100_1_;
-    TMP100  tpm100_2_;
+    static void udp_tx_task_wrapper(void* param)
+    {
+        auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
+        obj->udp_tx_task();
+    }
 
-    PSI2C psi2c_0;
-    PSI2C psi2c_0;
-
-    PSXADC psxadc_;
-
+protected:
     void greate_tasks();
     
     void rx_msg_proc( const udt_msg_t& udp_msg ) ;
     void tx_msg_proc();
-    
+
+    void ps_i2c_access_task();
+    void ps_xadc_access_task();
+
 public:
+
+    Germanium();
+    void task_init() override;
     
 };

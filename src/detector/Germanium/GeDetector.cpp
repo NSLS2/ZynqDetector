@@ -276,26 +276,48 @@ void proc_event_fifo_cnt( const udp_rx_msg_t& msg )
 //===============================================================
 // Only UDP tasks for GeDetector.
 //===============================================================
-void GeDetector::create_tasks()
+void GeDetector::task_init()
 {
 	xTaskCreate( udp_rx_task,
                  ( const char * ) "UDP_RX",
 				 configMINIMAL_STACK_SIZE,
 				 NULL,
 				 tskIDLE_PRIORITY,
-				 &udp_rx_task_handle );
+				 &udp_rx_task_handle_ );
 
 	xTaskCreate( udp_tx_task,
 				 ( const char * ) "UDP_TX",
 				 configMINIMAL_STACK_SIZE,
 				 NULL,
 				 tskIDLE_PRIORITY + 1,
-				 &udp_tx_task_handle );
+				 &udp_tx_task_handle_ );
+
+    xTaskCreate( psi2c_task,
+                 ( const char* ) "PS_I2C0"),
+                 configMINIMAL_STACK_SIZE,
+                 NULL,
+                 tskIDLE_PRIORITY + 1,
+                 &psi2c_0_task_handler_ );
+
+    xTaskCreate( psi2c_task,
+                ( const char* ) "PS_I2C1"),
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY + 1,
+                &psi2c_1_task_handler_ );
+
+
+    xTaskCreate( psxadc_task,
+                ( const char* ) "PS_I2C0"),
+                configMINIMAL_STACK_SIZE,
+                NULL,
+                tskIDLE_PRIORITY + 1,
+                &psxadc_task_handler_ );
 }
 //===============================================================
 
 
-
+void 
 
 void GeDetector::rx_msg_proc( udp_rx_msg_t& udp_msg )
 {
@@ -316,9 +338,20 @@ void GeDetector::rx_msg_proc( udp_rx_msg_t& udp_msg )
     }
 }
 
+static void udp_tx_task_wrapper(void* param)
+{
+    auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
+    obj->udp_tx_task();
+}
+
+static void Germanium::udp_tx_task()
+{
+
+}
+
 void GeDetector::tx_msg_proc( )
 {
-    xQueueReceive( fast_access_resp_queue,
+    xQueueReceive( register_single_access_resp_queue,
     			   Recdstring,
                    portMAX_DELAY );
 }

@@ -29,6 +29,8 @@ public:
 
 };
 
+
+template< typename Derived >
 class ZynqDetector : public FPGA
 {
 protected:
@@ -242,12 +244,15 @@ protected:
     //------------------------------
     // Task
     //------------------------------
-    virtual void udp_rx_task( void *pvParameters );
+    static void udp_rx_task( void *pvParameters );
+    virtual void udp_rx_task() = 0;
+    static void udp_tx_task_wrapper( void *pvParameters ) = 0;
     virtual void udp_tx_task( void *pvParameters ) = 0;
 
-    virtual void single_register_access_task();
-    virtual void pl_if_single_access_task( void *pvParameters ) = 0;
-    virtual void pl_if_multi_access_task()( void *pvParameters ) = 0;
+    static virtual void register_single_access_task_wrapper();
+    virtual void register_single_access_task();
+    //virtual void pl_if_single_access_task( void *pvParameters ) = 0;
+    //virtual void pl_if_multi_access_task()( void *pvParameters ) = 0;
 
     //------------------------------
     // Message
@@ -275,7 +280,29 @@ public:
     void DummyDetector::create_irq_task_map();
     
     void network_init();
+    virtual void queue_init() = 0;
     virtual void interrupt_init() = 0;
-    virtual void queue_init();
     virtual void task_init();
+
+    //===============================================================
+    // Used by both ZynqDetector or derived detector classes to wrap
+    // a task function task(), so that the task can access the
+    // members in ZynqDetector or in a derived detector class:
+    // - If task() is defined in ZynqDetector only,
+    //   ZynqDetector::task() is called;
+    // - If task() is defined in ZynqDetector but overridden in
+    //   Derived, Derived::task() is called;
+    //   ZynqDetector::task() is called;
+    // - If task() is defined in Derived only,
+    //   Derived::task() is called.
+    //
+    // This wrapper can be used by both ZynqDetector or derived
+    // detectors.
+    //
+    // Parameters:
+    //   - param: `this` of the caller.
+    //   - task: pointer to the task function.
+    //===============================================================
+    static void ZynqDetector::task_wrapper(void* param, void (Derived::*task)());
 };
+

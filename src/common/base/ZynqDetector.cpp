@@ -280,7 +280,7 @@ void ZynqDetector::read_network_config( const std::string& filename )
 //  Single register access.
 //  Assembles fast access request and sends it to the queue.
 //===============================================================
-void ZynqDetector::single_register_access_request_process( udp_rx_msg_t& msg )
+void ZynqDetector::register_single_access_request_process( udp_rx_msg_t& msg )
 {
     fast_access_req_t req;
     req.op   = msg->op;
@@ -325,9 +325,28 @@ void ZynqDetector::reg_access_task( void *pvParameters )
 
 
 //===============================================================
+// Wraps a task function for resource access.
+//===============================================================
+static void ZynqDetector::task_wrapper(void* param, void (Derived::*task)())
+{
+    auto obj = statid_cast<Derived*>(param);
+    if( obj )
+    {
+        obj->*task();
+    }
+    else
+    {
+        log_error("task_wrapper: Invalid cast\n");
+    }
+}
+
+//===============================================================
+
+
+//===============================================================
 // This task performs single register read/write operation.
 //===============================================================
-void ZynqDetector::single_register_access_task()
+void ZynqDetector::register_single_access_task()
 {
     SingleRegisterAccessReq  req;
     SingleRegisterAccessResp resp;

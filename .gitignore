@@ -14,9 +14,13 @@
 #Ignore lock files
 .lock
 
+/src/bin
 .bin
 .pdi
 .vitisWorkspace.json
 
 _ide/logs
 _ide/.wsdata
+
+# Ignore vscode
+/src/.vscode
