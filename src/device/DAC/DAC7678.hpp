@@ -1,17 +1,19 @@
 #pragma once
 
+template <typename T_I2C, typename T_I2C_REQ>
 class DAC7678
 {
 private:
+    T_I2C&  i2c_;
     uint8_t i2c_addr_;
-    req_queue_;
+    QueueHandle_t* req_queue_;
 
-    PSI2CReq psi2c_req_;
+    T_I2C_REQ req_;
     std::map<int, int> chan_assign_;  // stores <variable:channel>
                                       // defined by detector and passed to the constructor
 
 public:
-    DAC7678( uint8_t i2c_addr, psi2c_req_queue, std::map<int, char> chan_assign);
+    DAC7678( T_I2C i2c, uint8_t i2c_addr, std::map<int, char> chan_assign);
 
     ~DAC7678() = default;
 
@@ -19,3 +21,6 @@ public:
 
     void read( uint8_t chan, uint16_t data );
 };
+
+
+#include "DAC7678.cpp"

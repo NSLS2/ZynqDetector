@@ -45,3 +45,53 @@ float PSXADC::read_vcc()
     vcc_     = XAdcPs_RawToVoltage( vcc_raw_ );
     return vcc_;
 }
+
+void PSXADC::task()
+{
+    PSXADCReq req;
+    PSXADCResp resp;
+
+    char rd_data[4];
+    char wr_data[4];
+
+    auto param = static_cast<reg_access_task_param_t*>(pvParameters);
+
+    while(1)
+    {
+        xQueueReceive( req_queue
+                     , &req,
+					 , portMAX_DELAY );
+        
+        if ( req.op == READ_TEMPERATURE )
+        {
+            read( &resp.data, req.length, req.addr );
+            resp.op = req.op;
+            xQueueSend( req_queue_
+                      , resp,
+                      , 0UL
+                      );
+        }
+        else if ( req.op == READ_VCC )
+        {
+            read( &resp.data, req.length, req.addr );
+            resp.op = req.op;
+            xQueueSend( req_queue_
+                      , resp,
+                      , 0UL
+                      )
+        }
+    }
+}
+
+static void PSXADC::task_wrapper(void* param, void (PSXADC::*task)())
+{
+    auto obj = statid_cast<PSXADC*>(param);
+    if( obj )
+    {
+        obj->*task();
+    }
+    else
+    {
+        log_error("task_wrapper: Invalid cast\n");
+    }
+}

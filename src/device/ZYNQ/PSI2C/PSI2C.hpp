@@ -28,7 +28,26 @@ private:
     SemaphoreHandle_t mutex_;
 
 public:
-    PSI2C( uint8_t bus_index );
-    int send( char* buffer, uint16_t length, uint16_t slave_address );
-    int receive( char* buffer, uint16_t length, uint16_t slave_address );
+
+    struct PSI2CReq
+    {
+        uint16_t op;
+        uint8_t  length;
+        uint8_t  addr;
+        uint8_t  data[4];
+    };
+
+    struct PSI2CResp
+    {
+        uint16_t op;
+        uint8_t  length;
+        uint8_t  data[4];
+    };
+    
+    PSI2C( uint8_t bus_index, QueueHandle_t req_queue, QueueHandle_t resp_queue );
+    int write( char* buffer, uint16_t length, uint16_t slave_address );
+    int read( char* buffer, uint16_t length, uint16_t slave_address );
+
+    void task();
+    static void task_wrapper(void* param, void (PSI2C::*task)());
 };

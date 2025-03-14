@@ -1,13 +1,14 @@
 #include "LTC2309.hpp"
 
-LTC2309：：LTC2309( uint8_t i2c_addr
-                 , bool is_single_ended
-                 , QueueHandle_t req_queue,
-                 , std::map<int, char> chan_assign)
-    : i2c_addr_(i2c_addr)
-    , signle( is_single_ended ? 0x8 : 0 )
-    , req_queue_(req_queue)
-    , chan_assign_(chan_assign)
+LTC2309<T_I2C, T_I2C_REQ>：：LTC2309( T_I2C& i2c,
+                                   , uint8_t i2c_addr
+                                   , bool is_single_ended
+                                   , std::map<int, char> chan_assign
+                                   )
+    : i2c_        ( i2c                       )
+    , i2c_addr_   ( i2c_addr                  )
+    , signle      ( is_single_ended ? 0x8 : 0 )
+    , chan_assign_( chan_assign               )
 {}
 
 //============================================

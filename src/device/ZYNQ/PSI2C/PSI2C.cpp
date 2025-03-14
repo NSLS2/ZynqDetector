@@ -8,34 +8,40 @@ PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
     {
         base_address_ = I2C0_BASE_ADDRESS;
     }
-    else
+    else if( bus_index == 1 )
     {
         base_address_ = I2C1_BASE_ADDRESS;
+    }
+    else
+    {
+        log_error( "Invalid I2C bus index: %d", bus_index );
+        return;
     }
 
     // Initialize I2C
     i2cps_config_ptr_ = XIicPs_LookupConfig( base_address_ );
     if ( i2cps_config_ptr_ == NULL )
     {
-        printf("I2C %d: lookup config failed\n", bus_index_ );
+        log_error("I2C %d: lookup config failed\n", bus_index_ );
         //std::cout << "I2C " << bus_index << " lookup config failed\n";
+        return;
     }
-    return;
 
     int status = XIicPs_CfgInitialize( &i2c_ps_, i2cps_config_ptr_, i2cps_config_ptr_->BaseAddress );
     if ( status != XST_SUCCESS )
     {
         //std::cout << "I2C " << bus_index << " config initialization failed\n";
-        printf("I2C %d: config initialization failed\n", bus_index_ );
+        log_error("I2C %d: config initialization failed\n", bus_index_ );
+        return;
     }
-    return;
     
     // Self Test
     status = XIicPs_SelfTest( &i2c_ps_ );
     if ( status != XST_SUCCESS )
     {
         //std::cout << "I2C " << bus_index << " self-test failed\n";
-        printf("I2C %d: self-test failed failed\n", bus_index_);
+        log_error("I2C %d: self-test failed failed\n", bus_index_);
+        return;
     }
 
     // Set clock frequency
@@ -43,9 +49,9 @@ PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
 }
 
 //=========================================
-// Send to I2C bus.
+// Write to I2C bus.
 //=========================================
-int PSI2C::send( char* buffer, uint16_t length, uint16_t slave_address )
+int PSI2C::write( char* buffer, uint16_t length, uint16_t slave_address )
 {
     int status = XST_SUCCESS;
 
@@ -65,9 +71,9 @@ int PSI2C::send( char* buffer, uint16_t length, uint16_t slave_address )
 }
 
 //=========================================
-// Receive from I2C bus.
+// Read from I2C bus.
 //=========================================
-int PSI2C::receive( char* buffer, uint16_t length, uint16_t slave_address ) 
+int PSI2C::read( char* buffer, uint16_t length, uint16_t slave_address ) 
 {
     int status = XST_SUCCESS;
 
@@ -84,4 +90,50 @@ int PSI2C::receive( char* buffer, uint16_t length, uint16_t slave_address )
     }
     
     return status;
+}
+
+
+void PSI2C::task()
+{
+    PSI2CReq  req;
+    PSI2CResp resp;
+
+    char rd_data[4];
+    char wr_data[4];
+
+    auto param = static_cast<reg_access_task_param_t*>(pvParameters);
+
+    while(1)
+    {
+        xQueueReceive( req_queue
+                     , &req,
+					 , portMAX_DELAY );
+        
+        if ( req.read )
+        {
+            read( resp.data, req.length, req.addr );
+            resp.op = req.op;
+            xQueueSend( req_queue_
+                      , resp,
+                      , 0UL
+                      )
+        }
+        else
+        {
+            write( resp.data, req.length, req.addr );
+        }
+    }
+}
+
+static void PSI2C::task_wrapper(void* param, void (PSI2C::*task)())
+{
+    auto obj = statid_cast<PSI2C*>(param);
+    if( obj )
+    {
+        obj->*task();
+    }
+    else
+    {
+        log_error("task_wrapper: Invalid cast\n");
+    }
 }

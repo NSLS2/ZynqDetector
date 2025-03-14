@@ -24,30 +24,30 @@ ZYNQ::ZYNQ( Register& reg )
     : reg_( reg )
 {}
 
-
-void ZYNQ::add_pl_i2c_interface( const std::string& name
-                               , uint32_t instr_reg
-                               , uint32_t data_reg )
+/*
+auto ZYNQ::add_pl_i2c( const std::string& name
+                     , uint32_t instr_reg
+                     , uint32_t wr_data_reg
+                     , uint32_t rd_data_reg )
 {
-    pl_i2c_interfaces_.emplace( std::piecewise_construct,
-                                std::forward_as_tuple( name ),
-                                std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+    pl_i2cs_.emplace_back( std::piecewise_construct,
+                      std::forward_as_tuple( name ),
+                      std::forward_as_tuple( reg_, instr_reg, wr_data_reg, rd_data_reg ) );
 }
 
-void ZYNQ::add_pl_spi_interface( const std::string& name
-                               , uint32_t instr_reg
-                               , uint32_t data_reg )
+void ZYNQ::add_pl_spi( const std::string& name
+                     , uint32_t instr_reg
+                     , uint32_t wr_data_reg
+                     , uint32_t rd_data_reg )
 {
-    pl_spi_interfaces_.emplace( std::piecewise_construct
-                              , std::forward_as_tuple( name )
-                              , std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+    pl_spis_.emplace( std::piecewise_construct
+                    , std::forward_as_tuple( name )
+                    , std::forward_as_tuple( reg_, instr_reg, wr_data_reg, rd_data_reg ) );
 }
-
-void ZYNQ::add_ps_i2c_interface( const std::string& name )
+*/
+auto ZYNQ::add_ps_i2c_interface( uint32_t bus_index )
 {
-    ps_i2c_interfaces_.emplace( std::piecewise_construct
-                              , std::forward_as_tuple( name )
-                              , std::forward_as_tuple( reg_, instr_reg, data_reg ) );
+    return ps_i2cs_.emplace_back( bus_index );
 }
 
 I2CInterface* ZYNQ::get_pl_i2c_interface( const std::string& name )

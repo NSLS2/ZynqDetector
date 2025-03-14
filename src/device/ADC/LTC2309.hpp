@@ -3,22 +3,24 @@
 #include <map>
 #include <cstidint>
 
+template<typename T_I2C, typename T_I2C_REQ>
 class LTC2309
 {
 private:
-    uint8_t       i2c_addr_;
-    bool          is_single_ended_;
-    QueueHandle_t req_queue_;
+    T_I2C&    i2c_;
+    uint8_t   i2c_addr_;
+    bool      is_single_ended_;
+    T_I2C_REQ req_;
 
-    PSI2CReq psi2c_req_;
     std::map<int, int> chan_assign_;  // stores <variable:channel>
                                       // defined by detector and passed to the constructor
 
 public:
-    LTC2309( uint8_t i2c_addr
+    LTC2309( T_I2C&   i2c
+           , uint8_t i2c_addr
            , bool is_single_ended
-           , psi2c_req_queue
-           , std::map<int, char> chan_assign);
+           , std::map<int, char> chan_assign
+           );
 
     ~LTC2309() = default;
 

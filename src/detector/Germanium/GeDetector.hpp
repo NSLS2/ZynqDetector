@@ -56,18 +56,28 @@ class Germanium : public ZynqDetector<Germanium>
 private:
     const uint32_t base_addr_ = 0x43C00000;
 
-    LTC2309 ltc2309_;
-    DAC7678 dac7678_;
-    TMP100  tpm100_0_;
-    TMP100  tpm100_1_;
-    TMP100  tpm100_2_;
-    PSI2C psi2c_0;
-    PSI2C psi2c_1;
-    PSXADC psxadc_;
+    Zynq     zynq_;
+    PSI2C&   psi2c_0;
+    PSI2C&   psi2c_1;
+    PSXADC   psxadc_;
+    LTC2309<PSI2C>  ltc2309_;
+    DAC7678<PSI2C>  dac7678_;
+    TMP100<PSI2C>   tmp100_0_;
+    TMP100<PSI2C>   tmp100_1_;
+    TMP100<PSI2C>   tmp100_2_;
+
+    const uint8_t LTC2309_I2C_ADDR = 72;
+    const uint8_t DAC7678_I2C_ADDR = 72;
+    const uint8_t TMP100_0_I2C_ADDR = 72;
+    const uint8_t TMP100_1_I2C_ADDR = 72;
+    const uint8_t TMP100_2_I2C_ADDR = 72;
 
     TaskHandle_t  psi2c_0_task_handler_;
     TaskHandle_t  psi2c_1_task_handler_;
     TaskHandle_t  psxadc_task_handler_;
+
+    QueueHandle_t psi2c_0_req_queue;
+    QueueHandle_t psi2c_1_req_queue;
 
     //======================================
     // Instruction map
@@ -91,7 +101,7 @@ private:
         { LEDS, [this]() { this->load_mars_conf(); }
         { LEDS, [this]() { this->load_mars_conf(); }
         { LEDS, [this]() { this->load_mars_conf(); }
-      }
+      };
 
     static void udp_tx_task_wrapper(void* param)
     {

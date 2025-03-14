@@ -45,6 +45,14 @@ static StaticQueue_t xStaticQueue;
 #endif
 
 GeDetector::GeDetector()
+    : zynq_    ( base_addr_ )
+    , i2c0_    ( zynq.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue) )
+    , i2c1_    ( zynq.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue) )
+    , ltc2309  ( psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign )
+    , dac7678  ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign )
+    , tmp100_0_( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue )
+    , tmp100_1_( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue )
+    , tmp100_2_( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue )
 {
     instr_map_[RD_EVENT_FIFO_CTRL] = [this](udp_rx_msg_t msg){ proc_event_fifo_ctrl( msg ); };
     instr_map_[WR_EVENT_FIFO_CTRL] = [this](udp_rx_msg_t msg){ proc_event_fifo_ctrl( msg ); };
@@ -314,6 +322,42 @@ void GeDetector::task_init()
                 tskIDLE_PRIORITY + 1,
                 &psxadc_task_handler_ );
 }
+
+
+void Germanium::device_access_task_init()
+{
+    xTaskCreate( reg_.task_wrapper
+               , ( const char * ) "UDP_RX"
+			   , configMINIMAL_STACK_SIZE
+			   , &reg_
+			   , tskIDLE_PRIORITY
+			   , &udp_rx_task_handle_
+               );
+
+    xTaskCreate( psxadc_.task_wrapper
+               , ( const char * ) "UDP_RX"
+			   , configMINIMAL_STACK_SIZE
+			   , &psxadc_
+			   , tskIDLE_PRIORITY
+			   , &udp_rx_task_handle_
+               );
+
+    xTaskCreate( psi2c0_.task_wrapper
+               , ( const char * ) "UDP_RX"
+			   , configMINIMAL_STACK_SIZE
+			   , &psi2c0_
+			   , tskIDLE_PRIORITY
+			   , &udp_rx_task_handle_
+               );
+
+    xTaskCreate( psi2c1_.task_wrapper
+               , ( const char * ) "UDP_RX"
+			   , configMINIMAL_STACK_SIZE
+			   , &psi2c1_
+			   , tskIDLE_PRIORITY
+			   , &udp_rx_task_handle_
+               );
+}
 //===============================================================
 
 
@@ -355,3 +399,6 @@ void GeDetector::tx_msg_proc( )
     			   Recdstring,
                    portMAX_DELAY );
 }
+
+
+void device_access_task_init()
