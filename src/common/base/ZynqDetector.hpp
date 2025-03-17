@@ -60,15 +60,11 @@ protected:
     //------------------------------
     // Access request
     //------------------------------
-    typedef struct
-    {
-        uint16_t op;
-        uint32_t data;
-    } SingleRegisterAccessReq;
+
 
     typedef struct
     {
-        uint8_t  op;
+        uint16_t op;
         bool     read;
         uint8_t  device_addr;
         uint16_t instr_reg_addr;
@@ -78,7 +74,7 @@ protected:
 
     typedef struct
     {
-        uint32_t op;
+        uint16_t op;
         bool     read;
         uint32_t leng;
         uint8_t  device_addr;
@@ -87,27 +83,33 @@ protected:
         uint32_t data[4096/4 - 1];
     } PlInterfaceMultiAccessReq;
 
+    typedef struct
+    {
+        uint16_t op;
+        uint32_t data;
+    } PSI2CAccessReq;
     //------------------------------
     // Access response
     //------------------------------
-    typedef struct
-    {
-        uint16_t  op;
-        uint32_t  data;
-    } SingleRegisterAccessResp;
 
     typedef struct
     {
-        uint8_t   op;
+        uint16_t  op;
         uint32_t  data;
     } PlInterfaceSingleAccessResp;
     
     typedef struct
     {
-        uint8_t  op;
+        uint16_t op;
         uint32_t leng;
         uint32_t data[4096/4 - 1];
     } PlInterfaceMultiAccessResp;
+
+    typedef struct
+    {
+        uint16_t op;
+        uint32_t data;
+    } PSI2CAccessResp;
 
     //------------------------------
     // Task parameter
@@ -244,12 +246,13 @@ protected:
     //------------------------------
     // Task
     //------------------------------
-    static void udp_rx_task( void *pvParameters );
+    virtual void udp_rx_task();
     virtual void udp_rx_task() = 0;
-    static void udp_tx_task_wrapper( void *pvParameters ) = 0;
-    virtual void udp_tx_task( void *pvParameters ) = 0;
 
-    static virtual void register_single_access_task_wrapper();
+    virtual void network_task_init();
+    virtual void device_access_task_init();
+    virtual void polling_task_init();    
+
     virtual void register_single_access_task();
     //virtual void pl_if_single_access_task( void *pvParameters ) = 0;
     //virtual void pl_if_multi_access_task()( void *pvParameters ) = 0;
@@ -271,6 +274,7 @@ protected:
     template <typename T>
     void report_error( const std::string& s, T err_code, uint32_t fail_num );
     //==================================================
+    
 
 public:
 

@@ -1,30 +1,29 @@
 #pragma once
 
 
-
 class Register
 {
 public:
 
-    struct RegisterReq
+    typedef struct
     {
         uint16_t op;
-        uint8_t  length;
-        uint8_t  addr;
-        uint8_t  data[4];
-    };
-    
-    struct RegisterResp
+        uint32_t data;
+    } RegisterAccessReq;
+
+    typedef struct
     {
-        uint16_t op;
-        uint8_t  length;
-        uint8_t  data[4];
-    };
+        uint16_t  op;
+        uint32_t  data;
+    } RegisterAccessResp;
 
     Register( uintptr_t base_addr );
 
     void write( uint32_t offset, uint32_t value );
     uint32_t read( uint32_t offset );
+
+    void Register::task();
+    void Register::create_register_task();
 
 private:
     uintptr_t base_addr_;

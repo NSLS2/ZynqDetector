@@ -36,11 +36,10 @@ uint32_t Register::read( uint32_t offset )
 
 void Register::task()
 {
-    RegisterReq  req;
-    RegisterResp resp;
+    RegisterAccessReq  req;
+    RegisterAccessResp resp;
 
-    char rd_data[4];
-    char wr_data[4];
+    uint32_t offset;
 
     auto param = static_cast<reg_access_task_param_t*>(pvParameters);
 
@@ -50,37 +49,27 @@ void Register::task()
                      , &req,
 					 , portMAX_DELAY );
         
-        if ( req.op == READ_TEMPERATURE )
+        offset = static_cast<uint32_t>( req.op & 0x7fff );
+
+        if ( (req.op & 0x8000) != 0 )
         {
-            read( &resp.data, req.length, req.addr );
+            resp.data = read( offset );
             resp.op = req.op;
-            xQueueSend( req_queue_
+            xQueueSend( resp_queue_
                       , resp,
                       , 0UL
                       );
         }
-        else if ( req.op == READ_VCC )
+        else
         {
-            read( &resp.data, req.length, req.addr );
-            resp.op = req.op;
-            xQueueSend( req_queue_
-                      , resp,
-                      , 0UL
-                      )
+            write( req.data, offset );
         }
     }
 }
 
-static void PSXADC::task_wrapper(void* param, void (PSXADC::*task)())
+void Register::create_register_task()
 {
-    auto obj = statid_cast<PSXADC*>(param);
-    if( obj )
-    {
-        obj->*task();
-    }
-    else
-    {
-        log_error("task_wrapper: Invalid cast\n");
-    }
+    auto task_func = std::make_unique<std::function<void()>>([this]() { task(); });
+    xTaskCreate( task_wrapper, "Register Access", 1000, &task_func, 1, NULL );
 }
 //=========================================

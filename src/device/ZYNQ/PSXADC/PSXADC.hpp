@@ -12,6 +12,11 @@ private:
     u32            vcc_raw_;
     float          vcc_;
 
+    float read_temperature();
+    float read_vcc();
+
+    void task();
+
 public:
 
     struct PSXADCReq
@@ -30,10 +35,7 @@ public:
     };
 
     PSXADC();
-    float read_temperature();
-    float read_vcc();
 
     // Task
-    void task();
-    static void task_wrapper(void* param, void (PSXADC::*task)());
+    void PSXADC::create_psxadc_task();
 };

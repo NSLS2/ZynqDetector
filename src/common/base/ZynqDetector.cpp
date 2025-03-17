@@ -508,3 +508,20 @@ void ZynqDetector::rx_msg_proc( std::any& msg )
     }
 }
 //===============================================================
+
+
+void ZynqDetector::network_task_init()
+{
+    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_rx_task(); });
+    xTaskCreate( task_wrapper, "UDP Rx", 1000, &task_func, 1, NULL );
+
+    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_tx_task(); });
+    xTaskCreate( task_wrapper, "UDP Tx", 1000, &task_func, 1, NULL );
+}
+
+void ZynqDetector::task_init()
+{
+    network_task_init();
+    device_access_task_init();
+    polling_task_init();
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -29,6 +30,11 @@ private:
 
     SemaphoreHandle_t mutex_;
 
+    int write( char* buffer, uint16_t length, uint16_t slave_address );
+    int read( char* buffer, uint16_t length, uint16_t slave_address );
+
+    void task();
+
 public:
 
     struct PSI2CReq
@@ -46,10 +52,7 @@ public:
         uint8_t  data[4];
     };
     
-    PSI2C( uint8_t bus_index, QueueHandle_t req_queue, QueueHandle_t resp_queue );
-    int write( char* buffer, uint16_t length, uint16_t slave_address );
-    int read( char* buffer, uint16_t length, uint16_t slave_address );
+    PSI2C( uint8_t bus_index, std::string name, QueueHandle_t req_queue, QueueHandle_t resp_queue );
 
-    void task();
-    static void task_wrapper(void* param, void (PSI2C::*task)());
+    void create_psi2c_task();
 };

@@ -4,9 +4,14 @@
 
 #include "PSI2C.hpp"
 
-PSI2C::PSI2C( uint8_t bus_index, std::string name )
-    : bus_index_( bus_index )
-    , name_( name )
+PSI2C::PSI2C( uint8_t bus_index
+            , std::string name
+            , QueueHandle_t req_queue
+            , QueueHandle_t resp_queue );
+    : bus_index_  ( bus_index  )
+    , name_       ( name       )
+    , req_queue_  ( req_queue  )
+    , resp_queue_ ( resp_queue )
 {
     if ( bus_index == 0 )
     {
@@ -129,7 +134,6 @@ void PSI2C::task()
 
 static void PSI2C::create_psi2c_task()
 {
-    auto task_func = [this]() { task(); };
-
-    xTaskCreate( task_wrapper, name_, 1000, &task_func, 1, NULL );
+    auto task_func = std::make_unique<std::function<void()>>([this]() { task(); });
+    xTaskCreate( task_wrapper, name_.c_str(), 1000, &task_func, 1, NULL );
 }

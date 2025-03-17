@@ -1,14 +1,17 @@
-#include <iostream>
+#include "FreeRTOS.h"
+#include "task.h"
 
 #include <xparameters.h>
 #include <xadcps.h>
 #include <xil_types.h>
 #include <xil_printf.h>
 #include <sleep.h>
-
+#include <task_wrapper.hpp>
+#include "Logger.hpp"
 #include "XADC.hpp"
 
-PSXADC::PSXADC()
+PSXADC::PSXADC( std::string name )
+    : name_( name )
 {
     int status;
     
@@ -17,14 +20,14 @@ PSXADC::PSXADC()
     status = XAdcPs_CfgInitialize( &xadc_instance_ptr_, xadc_config_, xadc_config_->BaseAddress );
     if( status != XST_SUCCESS )
     {
-        std::cout << "XADC failed to initialize.\n";
+        log_error( "XADC failed to initialize.\n" );
         exit( XST_FAILURE );
     }
     
     status = XAdcPs_SelfTest( &xadc_instance_ptr_ );
     if( status != XST_SUCCESS )
     {
-        print("XADC failed for self-test.\n");
+        log_error("XADC failed for self-test.\n");
         exit( XST_FAILURE );
     }
     
@@ -83,6 +86,7 @@ void PSXADC::task()
     }
 }
 
+/*
 static void PSXADC::task_wrapper(void* param, void (PSXADC::*task)())
 {
     auto obj = statid_cast<PSXADC*>(param);
@@ -94,4 +98,11 @@ static void PSXADC::task_wrapper(void* param, void (PSXADC::*task)())
     {
         log_error("task_wrapper: Invalid cast\n");
     }
+}
+*/
+
+void PSXADC::create_psxadc_task()
+{
+    auto task_func = std::make_unique<std::function<void()>>([this]() { task(); });
+    xTaskCreate( task_wrapper, name_.c_str(), 1000, &task_func, 1, NULL );
 }
