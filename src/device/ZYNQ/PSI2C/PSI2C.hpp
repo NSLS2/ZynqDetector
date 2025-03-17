@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
@@ -23,6 +24,7 @@ private:
     XIicPs i2c_ps_;
 
     uint8_t  bus_index_;
+    std::string name_;
     uint32_t base_address_;
 
     SemaphoreHandle_t mutex_;

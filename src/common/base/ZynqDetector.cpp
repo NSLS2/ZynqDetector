@@ -304,7 +304,7 @@ void ZynqDetector::reg_access_task( void *pvParameters )
 
     while(1)
     {
-        xQueueReceive( 	static_cast<(QueueHandle_t*>(pvParameters),
+        xQueueReceive( 	static_cast<QueueHandle_t*>(pvParameters),
 						&req,
 						portMAX_DELAY );
         

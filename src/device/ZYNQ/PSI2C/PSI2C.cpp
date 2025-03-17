@@ -1,8 +1,12 @@
 //#include <iostream>
 #include <stdio.h>
+#include <string>
+
 #include "PSI2C.hpp"
 
-PSI2C::PSI2C( uint8_t bus_index ) : bus_index_( bus_index )
+PSI2C::PSI2C( uint8_t bus_index, std::string name )
+    : bus_index_( bus_index )
+    , name_( name )
 {
     if ( bus_index == 0 )
     {
@@ -101,11 +105,9 @@ void PSI2C::task()
     char rd_data[4];
     char wr_data[4];
 
-    auto param = static_cast<reg_access_task_param_t*>(pvParameters);
-
     while(1)
     {
-        xQueueReceive( req_queue
+        xQueueReceive( req_queue_
                      , &req,
 					 , portMAX_DELAY );
         
@@ -113,27 +115,21 @@ void PSI2C::task()
         {
             read( resp.data, req.length, req.addr );
             resp.op = req.op;
-            xQueueSend( req_queue_
+            xQueueSend( resp_queue_
                       , resp,
                       , 0UL
                       )
         }
         else
         {
-            write( resp.data, req.length, req.addr );
+            write( req.data, req.length, req.addr );
         }
     }
 }
 
-static void PSI2C::task_wrapper(void* param, void (PSI2C::*task)())
+static void PSI2C::create_psi2c_task()
 {
-    auto obj = statid_cast<PSI2C*>(param);
-    if( obj )
-    {
-        obj->*task();
-    }
-    else
-    {
-        log_error("task_wrapper: Invalid cast\n");
-    }
+    auto task_func = [this]() { task(); };
+
+    xTaskCreate( task_wrapper, name_, 1000, &task_func, 1, NULL );
 }

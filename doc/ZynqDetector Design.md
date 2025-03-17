@@ -726,7 +726,7 @@ ztemp | AI | `ZTMP A-D Converter` | `@0` | | | ZYNQ
 
 ## Appendix
 
-### UDP send and wait for response in IOC
+### A1 UDP send and wait for response in IOC
 
 ```C++
 #include <epicsThread.h>
@@ -846,15 +846,15 @@ int main() {
 
 
 
-## Records -> Driver parameters
+### A2  Records -> Driver parameters
 
-### DAC
+#### A2.1 DAC
 
-#### Enable internal reference
+##### Enable internal reference
 
 Write 0x80'00'10.
 
-#### `:HV`
+##### `:HV`
 
 - Record
 
@@ -895,7 +895,7 @@ PV Value | Card | Reg | DAC ADDR | WriteDac Val | Chan | ReadDac Val | buf[0] | 
 2 | 0 | 5 | 74 | 16 | 5 | 16 | 0x35 | 0x1 | 0x0
 5 | 0 | 5 | 74 | 33 | 5 | 33 | 0x35 | 0x2 | 0x10
 
-#### `:P1`
+##### `:P1`
 
 - Record
 
@@ -934,7 +934,7 @@ PV Value | Card | Reg | DAC ADDR | WriteDac Val | Chan | ReadDac Val | buf[0] | 
 2 | 0 | 6 | 74 | 1638 | 6 | 1638 | 0x36 | 0x66 | 0x60
 5 | 0 | 6 | 74 | 33 | 5 | 33 | 0x32 | 0x2 | 0x10
 
-#### `:P2`
+##### `:P2`
 
 - Record
 
@@ -980,7 +980,7 @@ PV | Card | Reg/Chan | DAC ADDR | cntrlword
 `:HV` | 0 | 2 | 74
 
 
-#### Driver implementation
+##### Driver implementation
 
 ```c++
 class PSI2C
@@ -1147,9 +1147,9 @@ DAC7678::read( uint8_t chan )
 //============================================
 ```
 
-### ADC
+#### A2.2 ADC
 
-#### `:HV_RBV`
+##### - `:HV_RBV`
 
 - Record
 
@@ -1179,7 +1179,7 @@ Card | Reg | DAC ADDR | cntrlword | read val | buf[0] | buf[1]
 :-:|:-:|:-:|:-:|:-:|:-:|:-:
 1 | 4 | 8 | 168 | 34 | 0x2 | 0x20
 
-#### `:HV_CUR`
+##### - `:HV_CUR`
 
 Card: 1
 reg: 5
@@ -1187,7 +1187,7 @@ Chan: 5
 dacaddr: 8
 cntrlword: 232
 
-#### `:P1_CUR`
+##### - `:P1_CUR`
 
 Card: 1
 reg: 6
@@ -1195,7 +1195,7 @@ chan 6
 dacaddr: 8
 cntrlword: 184
 
-#### `:P2_CUR`
+##### - `:P2_CUR`
 
 Card: 1
 reg: 7
@@ -1215,7 +1215,7 @@ PV | Card | Reg/Chan | DAC ADDR | cntrlword
 `:P2_CUR` | 1 | 7 | 8 | 0xF8
 
 
-
+##### - Driver
 
 ```c++
 class LTC2309
@@ -1274,7 +1274,7 @@ void LTC2309::read( uint8_t chan )
 //============================================
 ```
 
-### Tmp100
+#### A2.3 Tmp100
 
 - PVs: `:Temp1`, `:Temp2`, `:Temp3`
   - `EGUF` - Engineer Units Full: 4.096
@@ -1283,6 +1283,7 @@ void LTC2309::read( uint8_t chan )
   - `ESLO` - Raw to EGU Slope: 0.0625
   - `EOFF` - Raw to EGU Offset: 0
 
+##### Driver
 
 ```c++
 class Tmp100
@@ -1335,3 +1336,82 @@ void Tmp100::read( std::string dev )
     }
 }
 //============================================
+```
+
+### A3 Data Types and Function calls
+
+#### A3.1 Data Types
+
+- ##### Queue
+
+```c++
+QueueHandle_t
+QueueSetMemberHandle_t
+QueueSetHandle_t
+
+```
+
+- ##### Tasks
+
+```c++
+TaskHandle_t
+
+```
+
+
+#### A3.2 Function Calls
+
+- ##### Queue
+```c++
+xQueueReceive( static_cast<QueueHandle_t*>(pvParameters),
+						   &req,
+						   portMAX_DELAY );
+
+xQueueSend( single_register_access_request_queue,
+           	req,
+            0UL );
+```
+
+- ##### Task
+
+```c++
+// FreeRTOS function call
+xTaskCreate( udp_rx_task,
+             ( const char * ) "UDP_RX",
+    				 configMINIMAL_STACK_SIZE,
+		    		 NULL,
+				     tskIDLE_PRIORITY,
+				     &udp_rx_task_handle_ );
+```
+
+```c++
+// A free function task_wrapper
+void task_wrapper(void* pvParameters)
+{
+    auto* task_func = static_cast<std::function<void()>*>( pvParameters );
+    if (task_func)
+    {
+        (*task_func)();  // Call the actual function
+    }
+    vTaskDelete(nullptr);
+}
+
+// Use case
+class MyClass
+{
+public:
+    MyClass()
+    {
+        task_func = [this]() { task_function(); };
+        xTaskCreate( task_wrapper, "MyTask", 1000, &task_func, 1, &taskHandle );
+    }
+
+private:
+    TaskHandle_t taskHandle;
+    std::function<void()> task_func;
+
+    friend void task_wrap( void* pvParameters );
+};
+```
+
+

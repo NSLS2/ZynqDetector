@@ -12,7 +12,8 @@
 #include "xil_printf.h"
 #include "xparameters.h"
 // Project includes
-#include "zynq_detector.hpp"
+#include "ZynqDetector.hpp"
+#include "Germanium.hpp"
 #include "pynq_ssd_msg.hpp"
 
 #define TIMER_ID	1
