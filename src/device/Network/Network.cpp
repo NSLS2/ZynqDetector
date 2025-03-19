@@ -6,7 +6,10 @@
 Network::Network( ZynqDetector owner, uint32_t udp_port )
     : owner_    ( owner    )
     , udp_port_ ( udp_port )
-{}
+{
+    owner_ = owner;
+    udp_port_ = udp_port;
+}
 
 //===============================================================
 // Network initialization.
@@ -40,57 +43,6 @@ Network::network_init()
 }
 //==============================================================
 
-//===============================================================
-// Convert a string to an IP/MAC address.
-//===============================================================
-bool Network::string_to_addr( const std::string& addr_str, uint8_t* addr )
-{
-    std::stringstream ss( addr_str );
-
-    bool is_ip = ( addr_str.find( '.' ) != std::string::npos );
-    auto separator = is_ip ? '.' : ':';
-    auto num_separator = std::count( addr_str.begin(), addr_str.end(), separator );
-    if ( ( is_ip && num_separator != 3 ) || ( !is_ip && num_separator != 5 ) )
-    {
-        std::cerr << "Wrong address string format" << addr_str << '\n';
-        return false;
-    }
-
-    std::string segment;
-
-    int i = 0;
-
-    while ( std::getline ( ss, segment, separator ) )
-    {
-        int byte = 0;
-        if ( is_ip )
-        {
-            if ( std::stringstream( segment ) >> byte )
-            {
-                if (byte < 0 || byte > 255) return false;  // Invalid byte value
-            }
-            else
-            {
-                return false;  // Invalid segment
-            }
-        }
-        else
-        {
-            try
-            {
-                byte = std::stoi( segment, nullptr, 16 );
-                if (byte < 0 || byte > 255) return false;  
-            }
-            catch ( const std::invalid_argument& )
-            {
-                return false;  // Invalid hex segment
-            }            
-        }
-        *(addr++) = static_cast<uint8_t>( byte );
-    }
-
-    return true;
-}
 
 //===============================================================
 // Read network parameters from file:
@@ -179,6 +131,59 @@ void Network::read_network_config( const std::string& filename )
 //===============================================================
 
 
+//===============================================================
+// Convert a string to an IP/MAC address.
+//===============================================================
+bool Network::string_to_addr( const std::string& addr_str, uint8_t* addr )
+{
+    std::stringstream ss( addr_str );
+
+    bool is_ip = ( addr_str.find( '.' ) != std::string::npos );
+    auto separator = is_ip ? '.' : ':';
+    auto num_separator = std::count( addr_str.begin(), addr_str.end(), separator );
+    if ( ( is_ip && num_separator != 3 ) || ( !is_ip && num_separator != 5 ) )
+    {
+        std::cerr << "Wrong address string format" << addr_str << '\n';
+        return false;
+    }
+
+    std::string segment;
+
+    int i = 0;
+
+    while ( std::getline ( ss, segment, separator ) )
+    {
+        int byte = 0;
+        if ( is_ip )
+        {
+            if ( std::stringstream( segment ) >> byte )
+            {
+                if (byte < 0 || byte > 255) return false;  // Invalid byte value
+            }
+            else
+            {
+                return false;  // Invalid segment
+            }
+        }
+        else
+        {
+            try
+            {
+                byte = std::stoi( segment, nullptr, 16 );
+                if (byte < 0 || byte > 255) return false;  
+            }
+            catch ( const std::invalid_argument& )
+            {
+                return false;  // Invalid hex segment
+            }            
+        }
+        *(addr++) = static_cast<uint8_t>( byte );
+    }
+
+    return true;
+}
+//===============================================================
+
 
 //===============================================================
 // UDP receive task.
@@ -200,12 +205,12 @@ void Network::udp_rx_task( void *pvParameters )
 
     while(1)
     {
-        uint16_t msg_leng = FreeRTOS_recvfrom( udp_socket_,
-                                               &msg,
-                                               sizeof( msg ),
-                                               0,
-                                               ( struct freertos_sockaddr * ) &src_sock_addr,
-                                               &src_addr_leng );
+        uint16_t msg_leng = FreeRTOS_recvfrom( udp_socket_
+                                             , &msg
+                                             , sizeof( msg )
+                                             , 0
+                                             , ( struct freertos_sockaddr * ) &src_sock_addr
+                                             , &src_addr_leng );
 
         if ( (msg_leng <= 0) || (msg.id != UDP_MSG_ID) )
         {
@@ -223,7 +228,14 @@ void Network::udp_rx_task( void *pvParameters )
         
         rx_msg_proc( msg );
     }
-
 }
 //===============================================================
 
+void Network::network_task_init()
+{
+    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_rx_task(); });
+    xTaskCreate( task_wrapper, "UDP Rx", 1000, &task_func, 1, NULL );
+
+    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_tx_task(); });
+    xTaskCreate( task_wrapper, "UDP Tx", 1000, &task_func, 1, NULL );
+}

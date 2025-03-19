@@ -39,4 +39,4 @@ public:
     explicit Network( ZynqDetector* owner, int udp_port );
 
 };
-
+ 
