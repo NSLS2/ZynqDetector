@@ -184,11 +184,7 @@ protected:
 
         
     QueueHandle_t reg_access_req_queue_               = NULL;
-    QueueHandle_t reg_access_req_queue_               = NULL;
-    QueueHandle_t interface_single_access_req_queue_  = NULL;
-    QueueHandle_t interface_single_access_resp_queue_ = NULL;
-    QueueHandle_t interface_multi_access_req_queue_   = NULL;
-    QueueHandle_t interface_multi_access_resp_queue_  = NULL;
+    QueueHandle_t reg_access_resp_queue_               = NULL;
     
     //------------------------------
     // Task handlers
@@ -202,20 +198,7 @@ protected:
     //------------------------------
     // Network
     //------------------------------
-    const uint32_t UDP_PORT = 25913;
-    const uint16_t MAX_UDP_MSG_LENG = 4096;
-    const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
-
-    uint8_t ip_addr_[4];
-    uint8_t netmask_[4];
-    uint8_t gateway_[4];
-    uint8_t dns_[4];
-    uint8_t mac_addr_[6];
-
-    std::atomic<bool> svr_ip_addr_lock_ {false};
-    uint8_t svr_ip_addr_[4];
-
-    int32_t udp_socket_;
+    std::unique_ptr<Network> network_;
 
     TimerHandle_t xPollTimer_ = NULL;
     std::vector<uint32_t> poll_list_{};  // PVs to be polled
@@ -237,18 +220,10 @@ protected:
     virtual void initialize_instr_map() = 0;
     virtual void isr_handler() = 0;
 
-    //------------------------------
-    // Network
-    //------------------------------
-    bool string_to_addr( const std::string& addr_str, uint8_t* addr );
-    void read_network_config( const std::string& filename );
 
     //------------------------------
     // Task
     //------------------------------
-    virtual void udp_rx_task();
-    virtual void udp_rx_task() = 0;
-
     virtual void network_task_init();
     virtual void device_access_task_init();
     virtual void polling_task_init();    

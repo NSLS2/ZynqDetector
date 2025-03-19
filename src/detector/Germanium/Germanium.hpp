@@ -56,10 +56,10 @@ class Germanium : public ZynqDetector<Germanium>
 private:
     const uint32_t base_addr_ = 0x43C00000;
 
-    Zynq     zynq_;
-    PSI2C&   psi2c_0;
-    PSI2C&   psi2c_1;
-    PSXADC   psxadc_;
+    Zynq            zynq_;
+    PSI2C&          psi2c_0_;
+    PSI2C&          psi2c_1_;
+    PSXADC          psxadc_;
     LTC2309<PSI2C>  ltc2309_;
     DAC7678<PSI2C>  dac7678_;
     TMP100<PSI2C>   tmp100_0_;
@@ -78,6 +78,13 @@ private:
 
     QueueHandle_t psi2c_0_req_queue;
     QueueHandle_t psi2c_1_req_queue;
+    QueueHandle_t psxadc_req_queue;
+
+    QueueHandle_t psi2c_0_resp_queue;
+    QueueHandle_t psi2c_1_resp_queue;
+    QueueHandle_t psxadc_resp_queue;
+
+    //QueueSetHandle_t resp_queue_set;
 
     //======================================
     // Instruction map
@@ -103,14 +110,16 @@ private:
         { LEDS, [this]() { this->load_mars_conf(); }
       };
 
+    /*
     static void udp_tx_task_wrapper(void* param)
     {
         auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
         obj->udp_tx_task();
     }
+    */
 
 protected:
-    void greate_tasks();
+    //void greate_tasks();
     
     void rx_msg_proc( const udt_msg_t& udp_msg ) ;
     void tx_msg_proc();

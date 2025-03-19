@@ -45,15 +45,16 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
-GeDetector::GeDetector()
-    : zynq_    ( base_addr_ )
-    , i2c0_    ( zynq.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue) )
-    , i2c1_    ( zynq.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue) )
+Germanium::Germanium()
+    : Base     ( std::make_unique<GermaniumNetwork>()                            )
+    , zynq_    ( base_addr_                                                      )
+    , i2c0_    ( zynq.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)         )
+    , i2c1_    ( zynq.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)         )
     , ltc2309  ( psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign )
-    , dac7678  ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign )
-    , tmp100_0_( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue )
-    , tmp100_1_( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue )
-    , tmp100_2_( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue )
+    , dac7678  ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign       )
+    , tmp100_0_( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue                   )
+    , tmp100_1_( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue                   )
+    , tmp100_2_( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue                   )
 {
     instr_map_[RD_EVENT_FIFO_CTRL] = [this](udp_rx_msg_t msg){ proc_event_fifo_ctrl( msg ); };
     instr_map_[WR_EVENT_FIFO_CTRL] = [this](udp_rx_msg_t msg){ proc_event_fifo_ctrl( msg ); };
@@ -94,6 +95,8 @@ GeDetector::GeDetector()
     instr_map_[RD_EVENT_FIFO_DATA] = [this](udp_rx_msg_t msg){ proc_event_fifo_data( msg ); };
 
     // Create interfaces
+
+    network_init( std::make_unique<GermaniumNetwork>(this));
 
     ps_i2c0_ = std::make_shared<PSI2C>("I2C0");
     ps_i2c1_ = std::make_shared<PSI2C>("I2C1");
@@ -362,8 +365,7 @@ void Germanium::device_access_task_init()
 //===============================================================
 
 
-void 
-
+/*
 void GeDetector::rx_msg_proc( udp_rx_msg_t& udp_msg )
 {
     op = udp_msg.op >> 14;
@@ -388,18 +390,25 @@ static void udp_tx_task_wrapper(void* param)
     auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
     obj->udp_tx_task();
 }
+*/
 
-static void Germanium::udp_tx_task()
+
+
+void Germanium::detector_queue_init()
 {
+    psi2c_0_req_queue = xQueueCreate( 5, sizeof(PSI2CReq) );
+    psi2c_1_req_queue = xQueueCreate( 5, sizeof(PSI2CReq) );
+    psxadc_req_queue  = xQueueCreate( 5, sizeof(PSXADCReq) );
 
+    psi2c_0_resp_queue = xQueueCreate( 5, sizeof(PSI2CResp) );
+    psi2c_1_resp_queue = xQueueCreate( 5, sizeof(PSI2CResp) );
+    psxadc_resp_queue  = xQueueCreate( 5, sizeof(PSXADCResp) );
+
+    resp_queue_set = xQueueCreateSet( 50 );
+    
+    xQueueAddToSet( psi2c_0_resp_queue, resp_queue_set );
+    xQueueAddToSet( psi2c_1_resp_queue, resp_queue_set );
+    xQueueAddToSet( psxadc_resp_queue, resp_queue_set );
 }
 
-void GeDetector::tx_msg_proc( )
-{
-    xQueueReceive( register_single_access_resp_queue,
-    			   Recdstring,
-                   portMAX_DELAY );
-}
 
-
-void device_access_task_init()
