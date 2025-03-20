@@ -58,47 +58,73 @@ private:
     int nelm_;
 
     // Mars configuration variables
-    struct chipstr
-    {
-        unsigned int pa      : 10; /* Threshold dac */
-        unsigned int pb      : 10; /* Test pulse dac */
-        unsigned char rm     : 1;  /* Readout mods; 1=synch, 0=asynch */
-        unsigned char senfl1 : 1;  /* Lock on peak found */
-        unsigned char senfl2 : 1;  /* Lock on threshold */
-        unsigned char m0     : 1;  /* 1=channel mon, 0=others */
-        unsigned char m1     : 1;  /* 1=pk det on PD/PN; 0=other mons on PD/PN */
-        unsigned char sbn    : 1;  /* enable buffer on pdn & mon outputs */
-        unsigned char sb     : 1;  /* enable buffer on pd & mon outputs */
-        unsigned char sl     : 1;  /* 0=internal 2pA leakage, 1=disabled */
-        unsigned char ts     : 2;  /* Shaping time */
-        unsigned char rt     : 1;  /* 1=timing ramp duration x 3 */
-        unsigned char spur   : 1;  /* 1=enable pileup rejector */
-        unsigned char sse    : 1;  /* 1=enable multiple-firing suppression */
-        unsigned char tr     : 2;  /* timing ramp adjust */
-        unsigned char ss     : 2;  /* multiple firing time adjust */
-        unsigned char c      : 5;  /* m0=0,Monitor select. m0=1, channel being monitored */
-        unsigned char g      : 3;  /* Gain select */
-        unsigned char slh    : 1;  /* internal leakage adjust */
-        unsigned char sp     : 1;  /* Input polarity; 1=positive, 0=negative */
-        unsigned char saux   : 1;  /* Enable monitor output */
-        unsigned char sbm    : 1;  /* Enable output monitor buffer */
-        unsigned char tm     : 1;  /* Timing mode; 0=ToA, 1=ToT */
-    }; // 48-bit
-    volatile struct chipstr globalstr[12];
+    // struct chipstr
+    // {
+    //     unsigned int pa : 10;     /* Threshold dac */
+    //     unsigned int pb : 10;     /* Test pulse dac */
+    //     unsigned char rm : 1;     /* Readout mods; 1=synch, 0=asynch */
+    //     unsigned char senfl1 : 1; /* Lock on peak found */
+    //     unsigned char senfl2 : 1; /* Lock on threshold */
+    //     unsigned char m0 : 1;     /* 1=channel mon, 0=others */
+    //     unsigned char m1 : 1;     /* 1=pk det on PD/PN; 0=other mons on PD/PN */
+    //     unsigned char sbn : 1;    /* enable buffer on pdn & mon outputs */
+    //     unsigned char sb : 1;     /* enable buffer on pd & mon outputs */
+    //     unsigned char sl : 1;     /* 0=internal 2pA leakage, 1=disabled */
+    //     unsigned char ts : 2;     /* Shaping time */
+    //     unsigned char rt : 1;     /* 1=timing ramp duration x 3 */
+    //     unsigned char spur : 1;   /* 1=enable pileup rejector */
+    //     unsigned char sse : 1;    /* 1=enable multiple-firing suppression */
+    //     unsigned char tr : 2;     /* timing ramp adjust */
+    //     unsigned char ss : 2;     /* multiple firing time adjust */
+    //     unsigned char c : 5;      /* m0=0,Monitor select. m0=1, channel being monitored */
+    //     unsigned char g : 3;      /* Gain select */
+    //     unsigned char slh : 1;    /* internal leakage adjust */
+    //     unsigned char sp : 1;     /* Input polarity; 1=positive, 0=negative */
+    //     unsigned char saux : 1;   /* Enable monitor output */
+    //     unsigned char sbm : 1;    /* Enable output monitor buffer */
+    //     unsigned char tm : 1;     /* Timing mode; 0=ToA, 1=ToT */
+    // }; // 48-bit
+    // volatile struct chipstr globalstr[12];
 
-    struct chanstr
-    {
-        unsigned char dp  : 4; /* Pileup rejector trim dac */
-        unsigned char nc1 : 1; /* no connection, set 0 */
-        unsigned char da  : 3; /* Threshold trim dac */
-        unsigned char sel : 1; /* 1=leakage current, 0=shaper output */
-        unsigned char nc2 : 1; /* no connection, set 0 */
-        unsigned char sm  : 1; /* 1=channel disable */
-        unsigned char st  : 1; /* 1=enable test input (30fF cap) */
-    }; // 12 bit
+    // struct chanstr
+    // {
+    //     unsigned char dp : 4;  /* Pileup rejector trim dac */
+    //     unsigned char nc1 : 1; /* no connection, set 0 */
+    //     unsigned char da : 3;  /* Threshold trim dac */
+    //     unsigned char sel : 1; /* 1=leakage current, 0=shaper output */
+    //     unsigned char nc2 : 1; /* no connection, set 0 */
+    //     unsigned char sm : 1;  /* 1=channel disable */
+    //     unsigned char st : 1;  /* 1=enable test input (30fF cap) */
+    // }; // 12 bit
 
-    volatile struct chanstr channelstr[384];
+    // volatile struct chanstr channelstr[384];
     unsigned int loads[12][14];
+
+    typedef union 
+    {
+        
+    } GermaniumConfigReq;
+    
+    op:
+    UPDATE_LOADS
+    STUFF_MARS
+    AD9252_CNFG
+    ZDDM_ARM
+
+    void latch_conf();
+    void update_loads( char* loads );
+    void send_spi_bit( int chip_sel, int val );
+    void load_ad9252reg( int chip_sel, int addr, int data );
+    int ad9252_cnfg( int chip_num, int addr, int data );
+    void zddm_arm( int mode, int val );
+
+
+
+    typedef struct 
+    {
+        uint16_t op;
+        
+    } RegisterMultiAccessReq;
 
     Zynq zynq_;
     PSI2C &psi2c_0_;
@@ -110,47 +136,6 @@ private:
     TMP100<PSI2C> tmp100_1_;
     TMP100<PSI2C> tmp100_2_;
 
-    struct chipstr
-    {
-        unsigned int pa;      /* Threshold dac */
-        unsigned int pb;      /* Test pulse dac */
-        unsigned char rm;     /* Readout mods; 1=synch, 0=asynch */
-        unsigned char senfl1; /* Lock on peak found */
-        unsigned char senfl2; /* Lock on threshold */
-        unsigned char m0;     /* 1=channel mon, 0=others */
-        unsigned char m1;     /* 1=pk det on PD/PN; 0=other mons on PD/PN */
-        unsigned char sbn;    /* enable buffer on pdn & mon outputs */
-        unsigned char sb;     /* enable buffer on pd & mon outputs */
-        unsigned char sl;     /* 0=internal 2pA leakage, 1=disabled */
-        unsigned char ts;     /* Shaping time */
-        unsigned char rt;     /* 1=timing ramp duration x 3 */
-        unsigned char spur;   /* 1=enable pileup rejector */
-        unsigned char sse;    /* 1=enable multiple-firing suppression */
-        unsigned char tr;     /* timing ramp adjust */
-        unsigned char ss;     /* multiple firing time adjust */
-        unsigned char c;      /* m0=0,Monitor select. m0=1, channel being monitored */
-        unsigned char g;      /* Gain select */
-        unsigned char slh;    /* internal leakage adjust */
-        unsigned char sp;     /* Input polarity; 1=positive, 0=negative */
-        unsigned char saux;   /* Enable monitor output */
-        unsigned char sbm;    /* Enable output monitor buffer */
-        unsigned char tm;     /* Timing mode; 0=ToA, 1=ToT */
-    };
-
-    volatile struct chipstr globalstr_[12];
-
-    struct chanstr
-    {
-        unsigned char dp;  /* Pileup rejector trim dac */
-        unsigned char nc1; /* no connection, set 0 */
-        unsigned char da;  /* Threshold trim dac */
-        unsigned char sel; /* 1=leakage current, 0=shaper output */
-        unsigned char nc2; /* no connection, set 0 */
-        unsigned char sm;  /* 1=channel disable */
-        unsigned char st;  /* 1=enable test input (30fF cap) */
-    };
-
-    volatile struct chanstr channelstr_[384];
     unsigned int loads_[12][14];
 
     const uint8_t LTC2309_I2C_ADDR = 72;
@@ -176,79 +161,45 @@ private:
     //======================================
     // Instruction map
     //======================================
-    const std::map<int, std::function<void()>> instruction_map
+    const std::map<int, std::function<void()>> instruction_map {
+        { MARS_CONF_LOAD, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+      };  
+
+    /*
+    static void udp_tx_task_wrapper(void* param)
     {
-        {
-            MARS_CONF_LOAD, [this]()
-            { this->load_mars_conf(); }
-            {
-                LEDS, [this]()
-                { this->load_mars_conf(); }
-                {
-                    LEDS, [this]()
-                    { this->load_mars_conf(); }
-                    {
-                        LEDS, [this]()
-                        { this->load_mars_conf(); }
-                        {
-                            LEDS, [this]()
-                            { this->load_mars_conf(); }
-                            {
-                                LEDS, [this]()
-                                { this->load_mars_conf(); }
-                                {
-                                    LEDS, [this]()
-                                    { this->load_mars_conf(); }
-                                    {
-                                        LEDS, [this]()
-                                        { this->load_mars_conf(); }
-                                        {
-                                            LEDS, [this]()
-                                            { this->load_mars_conf(); }
-                                            {
-                                                LEDS, [this]()
-                                                { this->load_mars_conf(); }
-                                                {
-                                                    LEDS, [this]()
-                                                    { this->load_mars_conf(); }
-                                                    {
-                                                        LEDS, [this]()
-                                                        { this->load_mars_conf(); }
-                                                        {
-                                                            LEDS, [this]()
-                                                            { this->load_mars_conf(); }
-                                                            {
-                                                                LEDS, [this]()
-                                                                { this->load_mars_conf(); }
-                                                                {
-                                                                    LEDS, [this]()
-                                                                    { this->load_mars_conf(); }
-                                                                    {
-                                                                        LEDS, [this]()
-                                                                        { this->load_mars_conf(); }
-                                                                        {
-                                                                            LEDS, [this]()
-                                                                            { this->load_mars_conf(); } {LEDS, [this]()
-                                                                                                         { this->load_mars_conf(); }};
+        auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
+        obj->udp_tx_task();
+    }
+    */
 
-                                                                            /*
-                                                                            static void udp_tx_task_wrapper(void* param)
-                                                                            {
-                                                                                auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
-                                                                                obj->udp_tx_task();
-                                                                            }
-                                                                            */
+protected:
+    // void greate_tasks();
 
-                                                                        protected:
-                                                                            // void greate_tasks();
+    void rx_msg_proc(const udt_msg_t &udp_msg);
+    void tx_msg_proc();
 
-                                                                            void rx_msg_proc(const udt_msg_t &udp_msg);
-                                                                            void tx_msg_proc();
+    void ps_i2c_access_task();
+    void ps_xadc_access_task();
 
-                                                                            void ps_i2c_access_task();
-                                                                            void ps_xadc_access_task();
-
-                                                                        public:
-                                                                            Germanium();
-                                                                            void task_init() override;
-                                                                        };
+public:
+    Germanium();
+    void task_init() override;
+};

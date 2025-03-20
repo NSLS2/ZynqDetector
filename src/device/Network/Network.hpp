@@ -27,16 +27,18 @@ protected:
     int32_t udp_socket_;
 
 
-    bool string_to_addr( const std::string& addr_str, uint8_t* addr );
     void read_network_config( const std::string& filename );
+    bool string_to_addr( const std::string& addr_str, uint8_t* addr );
     
     virtual void udp_rx_task();
-    virtual void udp_tx_task() = 0;
+    virtual void udp_tx_task();
 
-    virtual void rx_msg_proc() = 0;
+    virtual void rx_msg_proc();
+    virtual void tx_msg_proc() = 0;    
 
 public:
     explicit Network( ZynqDetector* owner, int udp_port );
-
+    void network_init();
+    void network_task_init();
 };
  

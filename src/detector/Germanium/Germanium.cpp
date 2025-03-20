@@ -289,6 +289,7 @@ void proc_event_fifo_cnt(const UDPRxMsg& msg)
 }
 //===============================================================
 
+
 //===============================================================
 //  EVENT_FIFO_CNT
 //===============================================================
@@ -299,17 +300,26 @@ void proc_event_fifo_cnt(const UDPRxMsg& msg)
 //===============================================================
 
 
+//===============================================================
+//===============================================================
 void proc_channelstr_update( const UDPRxMsg& msg )
 {
     memcpy( &channelstr__, msg.payload.channelstr_, sizeof(channelstr__) );
 }
+//===============================================================
 
 
+//===============================================================
+//===============================================================
 void proc_globalstr_update( const UDPRxMsg& msg )
 {
     memcpy( &globalstr__, msg.payload.lglobalstr__, sizeof(globalstr__) );
 }
+//===============================================================
 
+
+//===============================================================
+//===============================================================
 void register_access_request_proc(const UDPRxMsg &msg)
 {
     RegisterAccessRequest req;
@@ -317,6 +327,8 @@ void register_access_request_proc(const UDPRxMsg &msg)
     xQueueSend(register_access_request_queue, req,
                , 0UL)
 }
+//===============================================================
+
 
 //===============================================================
 // Only UDP tasks for GeDetector.
@@ -359,54 +371,84 @@ void GeDetector::task_init()
                 &psxadc_task_handler_ );
 }
 
-void Germanium::device_access_task_init()
+void Germanium::create_device_access_tasks()
 {
-    xTaskCreate(reg_.task_wrapper, (const char *)"UDP_RX", configMINIMAL_STACK_SIZE, &reg_, tskIDLE_PRIORITY, &udp_rx_task_handle_);
+    reg_.create_register_single_access_task();
 
-    xTaskCreate(psxadc_.task_wrapper, (const char *)"UDP_RX", configMINIMAL_STACK_SIZE, &psxadc_, tskIDLE_PRIORITY, &udp_rx_task_handle_);
+    psxadc_.create_psxadc_task();
 
-    xTaskCreate(psi2c0_.task_wrapper, (const char *)"UDP_RX", configMINIMAL_STACK_SIZE, &psi2c0_, tskIDLE_PRIORITY, &udp_rx_task_handle_);
+    psi2c0_.create_psi2c_task();
+    psi2c1_.create_psi2c_task();
 
-    xTaskCreate(psi2c1_.task_wrapper, (const char *)"UDP_RX", configMINIMAL_STACK_SIZE, &psi2c1_, tskIDLE_PRIORITY, &udp_rx_task_handle_);
+    xTaskCreate(register_multi_access_task_wrapper, (const char *)"Register-Multi-Access", configMINIMAL_STACK_SIZE, this, tskIDLE_PRIORITY, &register_multi_access_task_handle_);
+
+    xTaskCreate(psxadc_.task_wrapper, (const char *)"PSXADC-Access", configMINIMAL_STACK_SIZE, &psxadc_, tskIDLE_PRIORITY, &psxadc_task_handle_);
+
+    xTaskCreate(psi2c0_.task_wrapper, (const char *)"PSI2C-0-Access", configMINIMAL_STACK_SIZE, &psi2c0_, tskIDLE_PRIORITY, &psi2c_0_task_handle_);
+
+    xTaskCreate(psi2c1_.task_wrapper, (const char *)"PSI2C-1-Access", configMINIMAL_STACK_SIZE, &psi2c1_, tskIDLE_PRIORITY, &psi2c_1_task_handle_);
 }
 //===============================================================
 
-/*
-void GeDetector::rx_msg_proc( UDPRxMsg& udp_msg )
+
+//===============================================================
+// Register multi-access task wrapper
+//===============================================================
+void Register::create_register_multi_access_task()
 {
-    op = udp_msg.op >> 14;
-    reg = udp_msg.op && 0x3F;
+    auto task_func = std::make_unique<std::function<void()>>([this]() { register_multi_access_task(); });
+    xTaskCreate( task_wrapper, "Register Single Access", 1000, &task_func, 1, NULL );
+}
+//===============================================================
 
-    fast_access_resp_t fast_access_resq;
 
-    int instr = udp_msg.op;
-    auto it = instr_map_.find( instr );
-    if( it != instr_map_.end() )
+//===============================================================
+// Register multi-access task
+//===============================================================
+void Germanium::register_multi_access_task()
+{
+    GermaniumAccessReq req;
+
+    xQueueReceive( reg_multi_access_resp_queue_, &req, 0);
+    switch ( req.op & 0x7fff )
     {
-        it->second( udp_msg );
-    }
-    else
-    {
-        std::cout << "Invalid instruction: " << instr << '\n';
+        case UPDATE_LOADS:
+            update_loads( &req.data )
+            break;
+
+        case STUFF_MARS:
+            stuff_mars();
+            break;
+
+        case AD9252_CNFG:
+            ad9252_cnfg( req.ad9252_cnfg.chip_num
+                       , req.ad9252_cnfg.addr
+                       , req.ad9252_cnfg.val );
+
+        case ZDDM_ARM:
+            zddm_arm( req.zddm_arm.mode
+                    , req.zddm_arm.val );
+            break;
+            
+        default:
+            log_error( "Invalid op: %d", req.op & 0x7fff );
     }
 }
+//===============================================================
 
-static void udp_tx_task_wrapper(void* param)
-{
-    auto obj = static_cast<Germanium*>(param);  // get `this` of Germanium
-    obj->udp_tx_task();
-}
-*/
 
-void Germanium::detector_queue_init()
+//===============================================================
+// Germanium queue init
+//===============================================================
+void Germanium::create_detector_queues()
 {
     psi2c_0_req_queue = xQueueCreate(5, sizeof(PSI2CReq));
     psi2c_1_req_queue = xQueueCreate(5, sizeof(PSI2CReq));
-    psxadc_req_queue = xQueueCreate(5, sizeof(PSXADCReq));
+    psxadc_req_queue  = xQueueCreate(5, sizeof(PSXADCReq));
 
     psi2c_0_resp_queue = xQueueCreate(5, sizeof(PSI2CResp));
     psi2c_1_resp_queue = xQueueCreate(5, sizeof(PSI2CResp));
-    psxadc_resp_queue = xQueueCreate(5, sizeof(PSXADCResp));
+    psxadc_resp_queue  = xQueueCreate(5, sizeof(PSXADCResp));
 
     resp_queue_set = xQueueCreateSet(50);
 
@@ -414,43 +456,77 @@ void Germanium::detector_queue_init()
     xQueueAddToSet(psi2c_1_resp_queue, resp_queue_set);
     xQueueAddToSet(psxadc_resp_queue, resp_queue_set);
 }
+//===============================================================
 
-//=====================================
-// Register bunch operation
-//=====================================
-void latch_conf(void)
+
+void polling_task_init()
 {
-    reg_.write(MARS_CONF_LOAD, 2);
-    reg_.write(MARS_CONF_LOAD, 0);
+    poll_list.emplace_back( HV_RBV | 0x8000 );
+    poll_list.emplace_back( HV_CURR | 0x8000  );
+
+    TimerHandle_t xTimer = xTimerCreate( "1S Polling Tmer"
+        , pdMS_TO_TICKS(1000) // 1 second
+        , pdTRUE              // auto-reload
+        , ( void * ) 1        // timer ID
+        , polling_1s );
 }
 
-void set_globalstr_(char *)
+void polling_1s()
 {
+    UDPRxMsg msg;
+    
+    for ( auto iter : poll_list )
+    {
+        int instr = *iter;
+        auto it = instr_map_.find(instr);
+        if (it != instr_map_.end())
+        {
+            msg.op = instr;
+            it->second(msg);  // Call the corresponding function
+        }
+        else
+        {
+            std::cout << "Unknown instruction: " << instr << '\n';
+        }
+    }
 }
 
-void stuff_mars()
+//===============================================================
+// Germanium operations
+//===============================================================
+void Germanium::latch_conf()
 {
-    wrap(pscal);
+    reg_.write( MARS_CONF_LOAD, 2 );
+    reg_.write( MARS_CONF_LOAD, 0 );
+}
 
+void Germanium::update_loads( char* loads )
+{
+    memcpy( loads_, loads, sizeof(loads_) );
+}
+
+
+void Germanium::stuff_mars()
+{
     for (int i = 0; i < 12; i++)
     {
-        reg_.write(MARS_CONF_LOAD, 4);
-        reg_.write(MARS_CONF_LOAD, 0);
+        reg_.write( MARS_CONF_LOAD, 4 );
+        reg_.write( MARS_CONF_LOAD, 0 );
 
         for (int j = 0; j < 14; j++)
         {
-            reg_.write(MARS_CONFIG, loads__[i][j]);
+            reg_.write( MARS_CONFIG, loads__[i][j] );
             latch_conf();
             usleep(1000);
         }
 
-        reg_.write(MARS_CONF_LOAD, 0x00010000 << i);
-        reg_.write(MARS_CONF_LOAD, 0);
-        usleep(1000);
+        reg_.write( MARS_CONF_LOAD, 0x00010000 << i );
+        reg_.write( MARS_CONF_LOAD, 0 );
+        usleep( 1000 );
     }
 }
 
-void send_spi_bit(int, chip_sel, int val)
+void Germanium::send_spi_bit( int chip_sel, int val )
 {
     sda = val & 0x1;
 
@@ -470,7 +546,7 @@ void send_spi_bit(int, chip_sel, int val)
     reg_.write(ADC_SPI, (chip_sel | 0));
 }
 
-void load_ad9252reg(int chip_sel, int addr, int data)
+void Germanium::load_ad9252reg( int chip_sel, int addr, int data )
 {
     int i, j, k;
 
@@ -499,7 +575,7 @@ void load_ad9252reg(int chip_sel, int addr, int data)
     return (0);
 }
 
-int ad9252_cnfg(int chip_num, int addr, int data)
+int Germanium::ad9252_cnfg( int chip_num, int addr, int data )
 {
 
     int chip_sel;
@@ -526,749 +602,16 @@ int ad9252_cnfg(int chip_num, int addr, int data)
         chip_sel = 0b00000;
 
     // Assert CSB
-    reg_.write(ADC_SPI, chip_sel);
-    load_ad9252reg(chip_sel, addr, data);
-    reg_.write(ADC_SPI, 0b11100);
+    reg_.write( ADC_SPI, chip_sel );
+    load_ad9252reg( chip_sel, addr, data) ;
+    reg_.write( ADC_SPI, 0b11100 );
 
     return (0);
 }
 
-void wrap()
+void Germanium::zddm_arm( int mode, int val )
 {
-    int chip, tmp, j, chn;
-    int NCHIPS;
-    NCHIPS = zDDM_NCHIPS;
-    unsigned int tword, tword2;
-    for (chip = 0; chip < NCHIPS; chip++)
-    {
-        log_info("wrap: NCHIPS=%i chip=%i\n", NCHIPS, chip);
+    // Request to read FRAME_NO
 
-        /* do globals first */
-        j = 0;
-        tword = 0;
-        tword = globalstr_[chip].tm & 1;
-        /*1 */ j++;
-        tword = tword << 1 | (globalstr_[chip].sbm & 1);
-        /*2 */ j++;
-        tword = tword << 1 | (globalstr_[chip].saux & 1);
-        /*3 */ j++;
-        tword = tword << 1 | (globalstr_[chip].sp & 1);
-        /*4 */ j++;
-        tword = tword << 1 | (globalstr_[chip].slh & 1);
-        /*5 */ j++;
-        tword = tword << 2 | (globalstr_[chip].g & 3);
-        /*7 */ j += 2;
-        tword = tword << 5 | (globalstr_[chip].c & 0x1f);
-        /*12 */ j += 5;
-        tword = tword << 2 | (globalstr_[chip].ss & 3);
-        /*14 */ j += 2;
-        tword = tword << 2 | (globalstr_[chip].tr & 3);
-        /*16 */ j += 2;
-        tword = tword << 1 | (globalstr_[chip].sse & 1);
-        /*17 */ j++;
-        tword = tword << 1 | (globalstr_[chip].spur & 1);
-        /*18 */ j++;
-        tword = tword << 1 | (globalstr_[chip].rt & 1);
-        /*19 */ j++;
-        tword = tword << 2 | (globalstr_[chip].ts & 3);
-        /*21 */ j += 2;
-        tword = tword << 1 | (globalstr_[chip].sl & 1);
-        /*22 */ j++;
-        tword = tword << 1 | (globalstr_[chip].sb & 1);
-        /*23 */ j++;
-        tword = tword << 1 | (globalstr_[chip].sbn & 1);
-        /*24 */ j++;
-        tword = tword << 1 | (globalstr_[chip].m1 & 1);
-        /*25 */ j++;
-        tword = tword << 1 | (globalstr_[chip].m0 & 1);
-        /*26 */ j++;
-        tword = tword << 1 | (globalstr_[chip].senfl2 & 1);
-        /*27 */ j++;
-        tword = tword << 1 | (globalstr_[chip].senfl1 & 1);
-        /*28 */ j++;
-        tword = tword << 1 | (globalstr_[chip].rm & 1);
-        /*29 */ j++;
-        tmp = globalstr_[chip].pb;
-        tword = tword << 3 | ((tmp >> 7) & 7);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword=%x\n", j, tword);
-        }
-        loads_[chip][0] = tword;
-        tword2 = 0;
-        j = 0;
-        tword2 = tword2 | (tmp & 0x7f);
-        /*7 */ j += 7;
-        tword2 = tword2 << 10 | (globalstr_[chip].pa & 0x3ff);
-        /*17 */ j += 10;
-
-        chn = 31;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*18 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*19 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*20 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*24 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*29 */ j += 4;
-
-        chn = 30;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*30 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*31 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*32 */ j++;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][1] = tword2;
-        tword2 = 0;
-
-        j = 0;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*4 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*9 */ j += 4;
-
-        chn = 29;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*10 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*11 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*12 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*16 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*21 */ j += 4;
-
-        chn = 28;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*22 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*23 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*24 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*28 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*29 */ j++;
-        tmp = (channelstr_[chip * 32 + chn].dp & 15);
-        tword2 = tword2 << 3 | ((tmp >> 1) & 7);
-        /*32 */ j += 3;
-        loads_[chip][2] = tword2;
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        tword2 = 0;
-        j = 0;
-        tword2 = tword2 | (tmp & 0x1);
-        /*1 */ j++;
-        chn = 27;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*2 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*3 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*4 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*8 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*13 */ j += 4;
-
-        chn = 26;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*14 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*15 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*16 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*20 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*25 */ j += 4;
-
-        chn = 25;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*26 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*27 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*28 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*29 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][3] = tword2;
-
-        j = 0;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*5 */ j += 4;
-
-        chn = 24;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*6 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*7 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*8 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*12 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*17 */ j += 4;
-
-        chn = 23;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*18 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*19 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*20 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*24 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*29 */ j += 4;
-
-        chn = 22;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*30 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*31 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*32 */ j++;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][4] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*4 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*9 */ j += 4;
-
-        chn = 21;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*10 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*11 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*12 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*16 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*21 */ j += 4;
-
-        chn = 20;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*22 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*23 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*24 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*28 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*29 */ j++;
-        tmp = (channelstr_[chip * 32 + chn].dp & 15);
-        tword2 = tword2 << 3 | (tmp >> 1);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][5] = tword2;
-        tword2 = 0;
-        j = 0;
-        tword2 = tword2 | (tmp & 1);
-        /*1 */ j++;
-        chn = 19;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*2 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*3 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*4 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*8 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*13 */ j += 4;
-
-        chn = 18;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*14 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*15 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*16 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*20 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*25 */ j += 4;
-
-        chn = 17;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*26 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*27 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*28 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*29 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][6] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*5 */ j += 4;
-
-        chn = 16;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*6 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*7 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*8 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*12 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*17 */ j += 4;
-
-        chn = 15;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*18 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*19 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*20 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*24 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*29 */ j += 4;
-
-        chn = 14;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*30 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*31 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*32 */ j++;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][7] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*4 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*9 */ j += 4;
-
-        chn = 13;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*10 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*11 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*12 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*16 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*21 */ j += 4;
-
-        chn = 12;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*22 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*23 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*24 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*28 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*29 */ j++;
-        tmp = (channelstr_[chip * 32 + chn].dp & 15);
-        tword2 = tword2 << 3 | (tmp >> 1);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][8] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 | (tmp & 1);
-        /*1 */ j += 1;
-
-        chn = 11;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*2 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*3 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*4 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*8 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*13 */ j += 4;
-
-        chn = 10;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*14 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*15 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*16 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*20 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*25 */ j += 4;
-
-        chn = 9;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*26 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*27 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*28 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*29 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][9] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*5 */ j += 4;
-
-        chn = 8;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*6 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*7 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*8 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*12 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*17 */ j += 4;
-
-        chn = 7;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*18 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*19 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*20 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*24 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*29 */ j += 4;
-
-        chn = 6;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*30 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*31 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*32 */ j++;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][10] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*4 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*9 */ j += 4;
-
-        chn = 5;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*10 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*11 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*12 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*16 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*21 */ j += 4;
-
-        chn = 4;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*22 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*23 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*24 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*25 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*28 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*29 */ j++;
-        tmp = (channelstr_[chip * 32 + chn].dp & 15);
-        tword2 = tword2 << 3 | (tmp >> 1);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][11] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 | (tmp & 1);
-        /*1 */ j++;
-        chn = 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*2 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*3 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*4 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*5 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*8 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*13 */ j += 4;
-
-        chn = 2;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*14 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*15 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*16 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*17 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*20 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*21 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*25 */ j += 4;
-
-        chn = 1;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*26 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*27 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*28 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*29 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*32 */ j += 3;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i   tword2=%x\n", j, tword2);
-        }
-        loads_[chip][12] = tword2;
-        tword2 = 0;
-        j = 0;
-
-        tword2 = tword2 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*1 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*5 */ j += 4;
-
-        chn = 0;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].st & 1);
-        /*6 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sm & 1);
-        /*7 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc2 & 1);
-        /*8 */ j++;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].sel & 1);
-        /*9 */ j++;
-        tword2 = tword2 << 3 | (channelstr_[chip * 32 + chn].da & 7);
-        /*12 */ j += 3;
-        tword2 = tword2 << 1 | (channelstr_[chip * 32 + chn].nc1 & 1);
-        /*13 */ j++;
-        tword2 = tword2 << 4 | (channelstr_[chip * 32 + chn].dp & 15);
-        /*17 */ j += 4;
-        tword2 = tword2 << 15;
-        /*32 */ j += 15;
-
-        if (devzDDMdebug > 5)
-        {
-            printf("# bits=%i  chip=%i tword2=%x\n", j, chip, tword2);
-        }
-        loads_[chip][13] = tword2;
-    }
-    return (0);
-}
-
-
-
-void Germanium::germanium_data_init()
-{
-    int i;
-    for ( i = 0; i < num_chips_; i++ )
-    {
-        globalstr_[i].pa = 380;
-        globalstr_[i].pb = 102;
-        globalstr_[i].sbn = 1;
-        globalstr_[i].sb = 1;
-        globalstr_[i].rm = 1;
-        globalstr_[i].senfl1 = 0;
-        globalstr_[i].senfl2 = 1;
-        globalstr_[i].sbm = 1;
-        globalstr_[i].sl = 0; /* make 2pA default */
-        globalstr_[i].slh = 0;
-        globalstr_[i].saux = 0;
-        globalstr_[i].sp = 1;
-    }
-
-    for ( i = 0; i < nelm_; i++ )
-    {
-        channelstr_[i].sm = 0;
-        channelstr_[i].st = 0;
-        channelstr_[i].sel = 1;
-        channelstr_[i].da = 3; /* 3-bits, mid-scale*/
-        channelstr_[i].dp = 7; /* 4-bits, mid-scale*/
-    }
+    // Request to write TRIG
 }

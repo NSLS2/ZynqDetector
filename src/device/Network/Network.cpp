@@ -186,9 +186,22 @@ bool Network::string_to_addr( const std::string& addr_str, uint8_t* addr )
 
 
 //===============================================================
+// Create Tx and Rx tasks
+//===============================================================
+void Network::network_task_init()
+{
+    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_rx_task(); });
+    xTaskCreate( task_wrapper, "UDP Rx", 1000, &task_func, 1, owner_.udp_rx_task_handle_ );
+
+    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_tx_task(); });
+    xTaskCreate( task_wrapper, "UDP Tx", 1000, &task_func, 1, owner_.udp_tx_task_handle_ );
+}
+//===============================================================
+
+//===============================================================
 // UDP receive task.
 //===============================================================
-void Network::udp_rx_task( void *pvParameters )
+void Network::udp_rx_task()
 {
     UDPRxMsg msg;
     uint32_t msg_leng;
@@ -197,11 +210,6 @@ void Network::udp_rx_task( void *pvParameters )
     socklen_t src_addr_leng = sizeof( src_sock_addr );
 
     uint32_t remote_ip_addr, remote_ip_addr_tmp;
-
-    //=============================
-    // Initialize network
-    //=============================
-    xUDPSocket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_DGRAM, FREERTOS_IPPROTO_UDP);
 
     while(1)
     {
@@ -231,11 +239,48 @@ void Network::udp_rx_task( void *pvParameters )
 }
 //===============================================================
 
-void Network::network_task_init()
-{
-    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_rx_task(); });
-    xTaskCreate( task_wrapper, "UDP Rx", 1000, &task_func, 1, NULL );
 
-    auto task_func = std::make_unique<std::function<void()>>([this]() { udp_tx_task(); });
-    xTaskCreate( task_wrapper, "UDP Tx", 1000, &task_func, 1, NULL );
+//===============================================================
+// UDP transmit task.
+//===============================================================
+void Network::udp_tx_task( void *pvParameters )
+{
+    uint16_t msg_leng, tx_length;
+    UDPTxMsg msg;
+
+    while(1)
+    {
+        msg_leng = tx_msg_proc(msg);
+        tx_length = FreeRTOS_sendto( udp_socket_
+                                   , msg
+                                   , msg_leng
+                                   , 0
+                                   , &dest_sock_addr
+                                   , sizeof(dest_sock_addr) );
+
+        if (tx_length < 0)
+        {
+            log_error( "Failed to send UDP message\n" );
+        }
+    }
 }
+//===============================================================
+
+
+//===============================================================
+// UDP Rx message processing.
+//===============================================================
+void Network::rx_msg_proc( std::any& msg )
+{
+    int instr = msg.op && 0x7FFF;
+    auto it = instr_map_.find(instr);
+    if (it != instr_map_.end())
+    {
+        it->second(msg);  // Call the corresponding function
+    }
+    else
+    {
+        std::cout << "Unknown instruction: " << instr << '\n';
+    }
+}
+//===============================================================

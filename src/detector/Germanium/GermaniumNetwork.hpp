@@ -45,6 +45,6 @@ public:
     
     Socket_t socket_;
 
-    void rx_msg_proc() override;
+    //void rx_msg_proc() override;
     void tx_msg_proc() override;
 };

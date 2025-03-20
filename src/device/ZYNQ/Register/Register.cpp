@@ -9,9 +9,10 @@
 //=========================================
 // Register class
 //=========================================
-Register::Register( uintptr_t base_addr )
+Register::Register( uintptr_t base_addr, ZynqDetector* owner  )
 {
     base_addr_ = reinterpret_cast<volatile uint32_t*>( base_addr );
+    owner_ = owner;
 }
 
 void Register::write( uint32_t offset, uint32_t value )
@@ -45,7 +46,7 @@ void Register::task()
 
     while(1)
     {
-        xQueueReceive( req_queue
+        xQueueReceive( owner_.register_single_access_request_queue
                      , &req,
 					 , portMAX_DELAY );
         
@@ -55,7 +56,7 @@ void Register::task()
         {
             resp.data = read( offset );
             resp.op = req.op;
-            xQueueSend( resp_queue_
+            xQueueSend( owner_.register_single_access_response_queue
                       , resp,
                       , 0UL
                       );
@@ -67,9 +68,9 @@ void Register::task()
     }
 }
 
-void Register::create_register_task()
+void Register::create_register_single_access_task()
 {
     auto task_func = std::make_unique<std::function<void()>>([this]() { task(); });
-    xTaskCreate( task_wrapper, "Register Access", 1000, &task_func, 1, NULL );
+    xTaskCreate( task_wrapper, "Register Single Access", 1000, &task_func, 1, NULL );
 }
 //=========================================

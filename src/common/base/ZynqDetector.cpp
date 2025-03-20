@@ -274,36 +274,23 @@ void ZynqDetector::report_error( const std::string& s, T err_code, uint32_t fail
 
 
 
-
-
 //===============================================================
-// UDP Rx message processing.
 //===============================================================
-void ZynqDetector::rx_msg_proc( std::any& msg )
-{
-    int instr = msg.op && 0x8F;
-    auto it = instr_map_.find(instr);
-    if (it != instr_map_.end())
-    {
-        it->second(msg);  // Call the corresponding function
-    }
-    else
-    {
-        std::cout << "Unknown instruction: " << instr << '\n';
-    }
-}
-//===============================================================
-
 void ZynqDetector::network_init( std::unique_ptr<Network> network )
 {
     network_ = std::move( network );
 }
+//===============================================================
 
 
 
+//===============================================================
+//===============================================================
 void ZynqDetector::task_init()
 {
-    network_task_init();
-    device_access_task_init();
+    create_network_tasks();
+    create_detector_queues();
+    create_device_access_tasks();
     polling_task_init();
 }
+//===============================================================

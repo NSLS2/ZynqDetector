@@ -32,4 +32,5 @@ public:
 private:
     uintptr_t base_addr_;
     SemaphoreHandle_t mutex_;
+    ZynqDetector* owner_;
 };
