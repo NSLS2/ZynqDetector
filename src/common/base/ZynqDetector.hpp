@@ -148,11 +148,6 @@ protected:
     //==================================================
     uint32_t base_addr_;
 
-    //------------------------------
-    // Message
-    //------------------------------
-    using InstructionHandler = std::function<void(std::any&)>;
-    std::map<int, InstructionHandler> instr_map_;
 
     //------------------------------
     // Interrupt

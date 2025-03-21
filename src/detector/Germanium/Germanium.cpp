@@ -46,69 +46,32 @@ static StaticQueue_t xStaticQueue;
 #endif
 
 Germanium::Germanium()
-    : Base(std::make_unique<GermaniumNetwork>()), zynq_(base_addr_), i2c0_(zynq.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)), i2c1_(zynq.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)), ltc2309(psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign), dac7678(psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign), tmp100_0_(psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue), tmp100_1_(psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue), tmp100_2_(psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue)
+    : Base     ( std::make_unique<GermaniumNetwork>()                            )
+    , zynq_    ( base_addr_                                                      )
+    , i2c0_    ( zynq_.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)        )
+    , i2c1_    ( zynq_.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)        )
+    , ltc2309  ( psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign )
+    , dac7678  ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign       )
+    , tmp100_0_( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue                   )
+    , tmp100_1_( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue                   )
+    , tmp100_2_( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue                   )
 {
-    instr_map_[RD_EVENT_FIFO_CTRL] = [this](UDPRxMsg msg) { proc_event_fifo_ctrl(msg); };
-    instr_map_[WR_EVENT_FIFO_CTRL] = [this](UDPRxMsg msg) { proc_event_fifo_ctrl(msg); };
-    instr_map_[RD_DETECTOR_TYPE]   = [this](UDPRxMsg msg) { proc_detector_type(msg); };
-    instr_map_[WR_DETECTOR_TYPE]   = [this](UDPRxMsg msg) { proc_detector_type(msg); };
-    instr_map_[RD_MARS_RDOUT_ENB]  = [this](UDPRxMsg msg) { proc_mars_rdout_enb(msg); };
-    instr_map_[WR_MARS_RDOUT_ENB]  = [this](UDPRxMsg msg) { proc_mars_rdout_enb(msg); };
-    instr_map_[RD_TRIG]            = [this](UDPRxMsg msg) { proc_trig(msg); };
-    instr_map_[WR_TRIG]            = [this](UDPRxMsg msg) { proc_trig(msg); };
-    instr_map_[RD_FRAME_NO]        = [this](UDPRxMsg msg) { proc_frame_no(msg); };
-    instr_map_[WR_FRAME_NO]        = [this](UDPRxMsg msg) { proc_frame_no(msg); };
-    instr_map_[RD_COUNT_TIME_LO]   = [this](UDPRxMsg msg) { proc_count_time_lo(msg); };
-    instr_map_[WR_COUNT_TIME_LO]   = [this](UDPRxMsg msg) { proc_count_time_lo(msg); };
-    instr_map_[RD_COUNT_TIME_HI]   = [this](UDPRxMsg msg) { proc_count_time_hi(msg); };
-    instr_map_[WR_COUNT_TIME_HI]   = [this](UDPRxMsg msg) { proc_count_time_hi(msg); };
-    instr_map_[WR_MARS_CONF_LOAD]  = [this](UDPRxMsg msg) { proc_mars_conf_load(msg); };
-    instr_map_[WR_ADC_SPI]         = [this](UDPRxMsg msg) { proc_adc_spi(msg); };
-    instr_map_[RD_VERSIONREG]      = [this](UDPRxMsg msg) { proc_versionreg(msg); };
-    instr_map_[RD_MARS_PIPE_DELAY] = [this](UDPRxMsg msg) { proc_mars_pipe_delay(msg); };
-    instr_map_[WR_MARS_PIPE_DELAY] = [this](UDPRxMsg msg) { proc_mars_pipe_delay(msg); };
-    instr_map_[RD_TD_CAL]          = [this](UDPRxMsg msg) { proc_td_cal(msg); };
-    instr_map_[WR_TD_CAL]          = [this](UDPRxMsg msg) { proc_td_cal(msg); };
-    instr_map_[RD_COUNT_MODE]      = [this](UDPRxMsg msg) { proc_count_mode(msg); };
-    instr_map_[WR_COUNT_MODE]      = [this](UDPRxMsg msg) { proc_count_mode(msg); };
-    instr_map_[RD_CALPULSE_RATE]   = [this](UDPRxMsg msg) { proc_calpulse_rate(msg); };
-    instr_map_[WR_CALPULSE_RATE]   = [this](UDPRxMsg msg) { proc_calpulse_rate(msg); };
-    instr_map_[RD_CALPULSE_WIDTH]  = [this](UDPRxMsg msg) { proc_calpulse_width(msg); };
-    instr_map_[WR_CALPULSE_WIDTH]  = [this](UDPRxMsg msg) { proc_calpulse_width(msg); };
-    instr_map_[RD_CALPULSE_CNT]    = [this](UDPRxMsg msg) { proc_calpulse_cnt(msg); };
-    instr_map_[WR_CALPULSE_CNT]    = [this](UDPRxMsg msg) { proc_calpulse_cnt(msg); };
-    instr_map_[RD_MARS_CALPULSE]   = [this](UDPRxMsg msg) { proc_mars_calpulse(msg); };
-    instr_map_[WR_MARS_CALPULSE]   = [this](UDPRxMsg msg) { proc_mars_calpulse(msg); };
-    instr_map_[RD_CALPULSE_MODE]   = [this](UDPRxMsg msg) { proc_calpulse_mode(msg); };
-    instr_map_[WR_CALPULSE_MODE]   = [this](UDPRxMsg msg) { proc_calpulse_mode(msg); };
-    instr_map_[RD_UDP_IP_ADDR]     = [this](UDPRxMsg msg) { proc_udp_ip_addr(msg); };
-    instr_map_[WR_UDP_IP_ADDR]     = [this](UDPRxMsg msg) { proc_udp_ip_addr(msg); };
-    instr_map_[RD_EVENT_FIFO_CNT]  = [this](UDPRxMsg msg) { proc_event_fifo_cnt(msg); };
-    instr_map_[RD_EVENT_FIFO_DATA] = [this](UDPRxMsg msg) { proc_event_fifo_data(msg); };
-    isntr_map_[WR_GLOBALSTR]       = [this](UDPRxMsg msg){ proc_globalstr_update(msg); }
-    isntr_map_[WR_CHANNELSTR]      = [this](UDPRxMsg msg){ proc_channelstr_update(msg); }
-
     // Create interfaces
 
     network_init(std::make_unique<GermaniumNetwork>(this));
+
+    reg_ = new GermaniumRegister();
 
     ps_i2c0_ = std::make_shared<PSI2C>("I2C0");
     ps_i2c1_ = std::make_shared<PSI2C>("I2C1");
 }
 
 //===============================================================
-//  EVENT_FIFO_CTRL
-//===============================================================
-void proc_event_fifo_ctrl(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
 
 //===============================================================
 //  DETECTOR_TYPE
 //===============================================================
-void proc_detector_type(const UDPRxMsg& msg)
+/*void proc_detector_type(const UDPRxMsg& msg)
 {
     if ( msg.op&0x8000 == 0 )
     {
@@ -126,196 +89,7 @@ void proc_detector_type(const UDPRxMsg& msg)
     register_access_request_proc(msg);
 }
 //===============================================================
-
-//===============================================================
-//  MARS_RDOUT_ENB
-//===============================================================
-void proc_mars_rdout_enb(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  TRIG
-//===============================================================
-void proc_trig(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  FRAME_NO
-//===============================================================
-void proc_frame_no(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  COUNT_TIME_LO
-//===============================================================
-void proc_count_time_lo(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  COUNT_TIME_HI
-//===============================================================
-void proc_count_time_hi(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  MARS_CONF_LOAD
-//===============================================================
-void proc_mars_conf_load(const UDPRxMsg& msg)
-{
-    (msg);
-}
-//===============================================================
-
-//===============================================================
-//  ADC_SPI
-//===============================================================
-void proc_adc_spi(const UDPRxMsg& msg)
-{
-    (msg);
-}
-//===============================================================
-
-//===============================================================
-//  VERSIONREG
-//===============================================================
-void proc_versionreg(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  MARS_PIPE_DELAY
-//===============================================================
-void proc_mars_pipe_delay(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  TD_CAL
-//===============================================================
-void proc_td_cal(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  COUNT_MODE
-//===============================================================
-void proc_count_mode(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  CALPULSE_RATE
-//===============================================================
-void proc_calpuse_rate(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  CALPULSE_WIDTH
-//===============================================================
-void proc_calpulse_width(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  CALPULSE_CNT
-//===============================================================
-void proc_calpulse_cnt(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  MARS_CALPULSE
-//===============================================================
-void proc_mars_calpulse(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  CALPULSE_MODE
-//===============================================================
-void proc_calpulse_mode(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  UDP_IP_ADDR
-//===============================================================
-void proc_udp_ip_addr(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-//===============================================================
-//  EVENT_FIFO_CNT
-//===============================================================
-void proc_event_fifo_cnt(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-
-//===============================================================
-//  EVENT_FIFO_CNT
-//===============================================================
-void proc_event_fifo_cnt(const UDPRxMsg& msg)
-{
-    register_access_request_proc(msg);
-}
-//===============================================================
-
-
-//===============================================================
-//===============================================================
-void proc_channelstr_update( const UDPRxMsg& msg )
-{
-    memcpy( &channelstr__, msg.payload.channelstr_, sizeof(channelstr__) );
-}
-//===============================================================
-
-
-//===============================================================
-//===============================================================
-void proc_globalstr_update( const UDPRxMsg& msg )
-{
-    memcpy( &globalstr__, msg.payload.lglobalstr__, sizeof(globalstr__) );
-}
-//===============================================================
+*/
 
 
 //===============================================================
@@ -325,7 +99,7 @@ void register_access_request_proc(const UDPRxMsg &msg)
     RegisterAccessRequest req;
     req.op = msg.op;
     xQueueSend(register_access_request_queue, req,
-               , 0UL)
+               , 0UL);
 }
 //===============================================================
 
@@ -380,13 +154,33 @@ void Germanium::create_device_access_tasks()
     psi2c0_.create_psi2c_task();
     psi2c1_.create_psi2c_task();
 
-    xTaskCreate(register_multi_access_task_wrapper, (const char *)"Register-Multi-Access", configMINIMAL_STACK_SIZE, this, tskIDLE_PRIORITY, &register_multi_access_task_handle_);
+    xTaskCreate( register_multi_access_task_wrapper
+               , (const char *)"Register-Multi-Access"
+               , configMINIMAL_STACK_SIZE
+               , this
+               , tskIDLE_PRIORITY
+               , &register_multi_access_task_handle_ );
 
-    xTaskCreate(psxadc_.task_wrapper, (const char *)"PSXADC-Access", configMINIMAL_STACK_SIZE, &psxadc_, tskIDLE_PRIORITY, &psxadc_task_handle_);
+    xTaskCreate( psxadc_.task_wrapper
+               , (const char *)"PSXADC-Access"
+               , configMINIMAL_STACK_SIZE
+               , &psxadc_
+               , tskIDLE_PRIORITY
+               , &psxadc_task_handle_ );
 
-    xTaskCreate(psi2c0_.task_wrapper, (const char *)"PSI2C-0-Access", configMINIMAL_STACK_SIZE, &psi2c0_, tskIDLE_PRIORITY, &psi2c_0_task_handle_);
+    xTaskCreate( psi2c0_.task_wrapper
+               , (const char *)"PSI2C-0-Access"
+               , configMINIMAL_STACK_SIZE
+               , &psi2c0_
+               , tskIDLE_PRIORITY
+               , &psi2c_0_task_handle_ );
 
-    xTaskCreate(psi2c1_.task_wrapper, (const char *)"PSI2C-1-Access", configMINIMAL_STACK_SIZE, &psi2c1_, tskIDLE_PRIORITY, &psi2c_1_task_handle_);
+    xTaskCreate( psi2c1_.task_wrapper
+               , (const char *)"PSI2C-1-Access"
+               , configMINIMAL_STACK_SIZE
+               , &psi2c1_
+               , tskIDLE_PRIORITY
+               , &psi2c_1_task_handle_ );
 }
 //===============================================================
 
@@ -459,6 +253,9 @@ void Germanium::create_detector_queues()
 //===============================================================
 
 
+//===============================================================
+// Latch MARS configuration.
+//===============================================================
 void polling_task_init()
 {
     poll_list.emplace_back( HV_RBV | 0x8000 );
@@ -470,6 +267,8 @@ void polling_task_init()
         , ( void * ) 1        // timer ID
         , polling_1s );
 }
+//===============================================================
+
 
 void polling_1s()
 {
@@ -490,40 +289,50 @@ void polling_1s()
         }
     }
 }
+//===============================================================
 
 //===============================================================
-// Germanium operations
+// Latch MARS configuration.
 //===============================================================
 void Germanium::latch_conf()
 {
-    reg_.write( MARS_CONF_LOAD, 2 );
-    reg_.write( MARS_CONF_LOAD, 0 );
+    reg_.write( GermaniumRegister::MARS_CONF_LOAD, 2 );
+    reg_.write( GermaniumRegister::MARS_CONF_LOAD, 0 );
 }
+//===============================================================
 
+
+//===============================================================
+// Stuff MARS.
+//===============================================================
+void Germanium::stuff_mars()
+{
+    for ( int i = 0; i < 12; i++ )
+    {
+        reg_.write( GermaniumRegister::MARS_CONF_LOAD, 4 );
+        reg_.write( GermaniumRegister::MARS_CONF_LOAD, 0 );
+
+        for ( int j = 0; j < 14; j++ )
+        {
+            reg_.write( GermaniumRegister::MARS_CONF_LOAD, loads_[i][j] );
+            latch_conf();
+            vTaskDelay(pdMS_TO_TICKS(1));;
+        }
+
+        reg_.write( GermaniumRegister::MARS_CONF_LOAD, 0x00010000 << i );
+        reg_.write( GermaniumRegister::MARS_CONF_LOAD, 0 );
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+}
+//===============================================================
+
+
+//===============================================================
+// Update loads.
+//===============================================================
 void Germanium::update_loads( char* loads )
 {
     memcpy( loads_, loads, sizeof(loads_) );
-}
-
-
-void Germanium::stuff_mars()
-{
-    for (int i = 0; i < 12; i++)
-    {
-        reg_.write( MARS_CONF_LOAD, 4 );
-        reg_.write( MARS_CONF_LOAD, 0 );
-
-        for (int j = 0; j < 14; j++)
-        {
-            reg_.write( MARS_CONFIG, loads__[i][j] );
-            latch_conf();
-            usleep(1000);
-        }
-
-        reg_.write( MARS_CONF_LOAD, 0x00010000 << i );
-        reg_.write( MARS_CONF_LOAD, 0 );
-        usleep( 1000 );
-    }
 }
 
 void Germanium::send_spi_bit( int chip_sel, int val )
@@ -531,21 +340,26 @@ void Germanium::send_spi_bit( int chip_sel, int val )
     sda = val & 0x1;
 
     // set sclk low
-    reg_.write(ADC_SPI, (chip_sel | 0));
+    reg_.write( GermaniumRegister::ADC_SPI, (chip_sel | 0) );
 
     // set data with clock low
-    reg_.write(ADC_SPI, (chip_sel | sda));
+    reg_.write( GermaniumRegister::ADC_SPI, (chip_sel | sda) );
 
     // set clk high
-    reg_.write(ADC_SPI, (chip_sel | 0x2 | sda));
+    reg_.write( GermaniumRegister::ADC_SPI, (chip_sel | 0x2 | sda) );
 
     // set clk low
-    reg_.write(ADC_SPI, (chip_sel | sda));
+    reg_.write( GermaniumRegister::ADC_SPI, (chip_sel | sda) );
 
     // set data low
-    reg_.write(ADC_SPI, (chip_sel | 0));
+    reg_.write( GermaniumRegister::ADC_SPI, (chip_sel | 0) );
 }
+//===============================================================
 
+
+//===============================================================
+// Load AD9252 registers.
+//===============================================================
 void Germanium::load_ad9252reg( int chip_sel, int addr, int data )
 {
     int i, j, k;
@@ -574,44 +388,73 @@ void Germanium::load_ad9252reg( int chip_sel, int addr, int data )
         ;
     return (0);
 }
+//===============================================================
 
-int Germanium::ad9252_cnfg( int chip_num, int addr, int data )
+
+//===============================================================
+// Configure AD9252.
+//===============================================================
+int Germanium::ad9252_cfg( int chip_num, int addr, int data )
 {
 
     int chip_sel;
-    extern int fd;
 
-    // chip_sel is defined as: bit2=ADC0, bit3=ADC1, bit4=ADC2
-    /*
-    if ( chip_num>0 && chip_num<4 )
+    switch( chip_num )
     {
-        chip_sel = (7-chip_num) << 2;
+        case 1:
+            chip_sel = 0b11000;
+            break;
+        case 2:
+            chip_sel = 0b10100;
+            break;
+        case 3:
+            chip_sel = 0b01100;
+            break;
+        default:
+            chip_sel = 0b00000;
     }
-    else
-    {
-        chip_sel = 0x0;
-    }
-    */
-    if (chip_num == 1)
-        chip_sel = 0b11000;
-    else if (chip_num == 2)
-        chip_sel = 0b10100;
-    else if (chip_num == 3)
-        chip_sel = 0b01100;
-    else
-        chip_sel = 0b00000;
 
     // Assert CSB
-    reg_.write( ADC_SPI, chip_sel );
+    reg_.write( GermaniumRegister::ADC_SPI, chip_sel );
     load_ad9252reg( chip_sel, addr, data) ;
-    reg_.write( ADC_SPI, 0b11100 );
+    reg_.write( GermaniumRegister::ADC_SPI, 0b11100 );
 
     return (0);
 }
+//===============================================================
 
+
+//===============================================================
+// Arm.
+//===============================================================
 void Germanium::zddm_arm( int mode, int val )
 {
-    // Request to read FRAME_NO
+    RegisterSingleAccessResp resp;
 
-    // Request to write TRIG
+    if ( pscal->mode == 0 )
+    {
+        if ( val == 1 )
+        {
+            resp.data = reg_.read( GermaniumRegister::FRAME_NO );
+            reg_.write( GermaniumRegister::TRIG, val );
+        }
+        if ( val == 0 )
+        {
+            reg_.write( GermaniumRegister::TRIG, val );
+        }
+    }
+
+    if ( pscal->mode == 1 )
+    {
+        if ( val == 1 )
+        {
+            RegisterSingleAccessResp resp;
+            resp.data = reg_.read( GermaniumRegister::FRAME_NO );
+        }
+        if ( val == 0 )
+        {
+            reg_.write( GermaniumRegister::TRIG, val );
+        }
+    }
 }
+//===============================================================

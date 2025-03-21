@@ -243,7 +243,7 @@ void Network::udp_rx_task()
 //===============================================================
 // UDP transmit task.
 //===============================================================
-void Network::udp_tx_task( void *pvParameters )
+void Network::udp_tx_task()
 {
     uint16_t msg_leng, tx_length;
     UDPTxMsg msg;
@@ -272,9 +272,9 @@ void Network::udp_tx_task( void *pvParameters )
 //===============================================================
 void Network::rx_msg_proc( std::any& msg )
 {
-    int instr = msg.op && 0x7FFF;
-    auto it = instr_map_.find(instr);
-    if (it != instr_map_.end())
+    //int instr = msg.op && 0x7FFF;
+    auto it = rx_msg_map_.find(msg.op && 0x7FFF);
+    if (it != rx_msg_map_.end())
     {
         it->second(msg);  // Call the corresponding function
     }

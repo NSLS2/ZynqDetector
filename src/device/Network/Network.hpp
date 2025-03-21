@@ -26,6 +26,10 @@ protected:
 
     int32_t udp_socket_;
 
+    using MessageHandler = std::function<void(std::any&)>;
+    std::map<int, MessageHandler> rx_msg_map_;
+
+    virtual msg_map_init() = 0;
 
     void read_network_config( const std::string& filename );
     bool string_to_addr( const std::string& addr_str, uint8_t* addr );
@@ -34,7 +38,9 @@ protected:
     virtual void udp_tx_task();
 
     virtual void rx_msg_proc();
-    virtual void tx_msg_proc() = 0;    
+    virtual void tx_msg_proc() = 0;
+
+    
 
 public:
     explicit Network( ZynqDetector* owner, int udp_port );
