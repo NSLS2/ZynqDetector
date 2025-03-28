@@ -5,8 +5,9 @@
 #include <variant>
 
 #include "concepts.hpp"
+#include "queue.hpp"
 
-template<typename T_I2C>
+template< typename T_I2C >
 requires IsEitherType<T_I2C, PLI2C, PSI2C>
 class LTC2309
 {
@@ -32,3 +33,4 @@ public:
     void read( uint8_t chan )
         requires IsSameType<T, PLI2C>;
 };
+

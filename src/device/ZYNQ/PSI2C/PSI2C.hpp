@@ -8,6 +8,8 @@
 #include "xiicps.h"
 #include "xparameters.h"
 
+#inlcude "queue.hpp"
+
 #define I2C0_DEVICE_ID XPAR_XIICPS_0_DEVICE_ID // or use the base address if no device ID
 #define I2C1_DEVICE_ID XPAR_XIICPS_1_DEVICE_ID // or use the base address if no device ID
 
@@ -36,21 +38,6 @@ private:
     void task();
 
 public:
-
-    struct PSI2CReq
-    {
-        uint16_t op;
-        uint8_t  length;
-        uint8_t  addr;
-        uint8_t  data[4];
-    };
-
-    struct PSI2CResp
-    {
-        uint16_t op;
-        uint8_t  length;
-        uint8_t  data[4];
-    };
     
     PSI2C( uint8_t bus_index, std::string name, QueueHandle_t req_queue, QueueHandle_t resp_queue );
 

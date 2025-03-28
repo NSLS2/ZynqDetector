@@ -116,7 +116,7 @@ void PSI2C::task()
                      , &req,
 					 , portMAX_DELAY );
         
-        if ( req.read )
+        if ( req.op && = 0x8000 )
         {
             read( resp.data, req.length, req.addr );
             resp.op = req.op;

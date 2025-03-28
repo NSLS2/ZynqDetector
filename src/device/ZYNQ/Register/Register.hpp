@@ -5,21 +5,13 @@
 
 #include "FreeRTOS.h"
 
+#include "queue.h"
+
 class Register
 {
 public:
 
-    typedef struct
-    {
-        uint16_t op;
-        uint32_t data;
-    } RegisterAccessReq;
 
-    typedef struct
-    {
-        uint16_t  op;
-        uint32_t  data;
-    } RegisterAccessResp;
 
     Register( uintptr_t base_addr );
 

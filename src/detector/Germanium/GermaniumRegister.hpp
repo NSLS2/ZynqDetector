@@ -49,4 +49,5 @@ public:
     const uint16_t TEMP2             = 161;  // Temperature 2
     const uint16_t TEMP3             = 162;  // Temperature 3
     const uint16_t ZTEP              = 170;  // CPU temperature
+    const uint16_t DAC_INT_REF       = 180;  // DAC7678 internal reference
 };
