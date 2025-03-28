@@ -146,7 +146,7 @@ protected:
     //==================================================
     //                    Variables                   //
     //==================================================
-    uint32_t base_addr_;
+    //uint32_t base_addr_;
 
 
     //------------------------------
@@ -203,6 +203,7 @@ protected:
     // Network
     //------------------------------
     std::unique_ptr<Network> network_;
+    Zynq zynq_;
 
     TimerHandle_t xPollTimer_ = NULL;
     std::vector<uint16_t> poll_list_{};  // PVs to be polled

@@ -46,7 +46,7 @@ static StaticQueue_t xStaticQueue;
 #endif
 
 Germanium::Germanium()
-    : Base     ( std::make_unique<GermaniumNetwork>()                            )
+    : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>()                            )
     , zynq_    ( base_addr_                                                      )
     , i2c0_    ( zynq_.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)        )
     , i2c1_    ( zynq_.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)        )

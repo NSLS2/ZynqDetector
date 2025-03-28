@@ -25,18 +25,13 @@
 //=========================================
 // ZYNQ class
 //=========================================
-class ZYNQ
+class GermaniumZYNQ : public ZYNQ
 {
 private:
-    Register reg_;
-    //std::map<std::string, PLInterface> pl_i2cs_;
-    //std::map<std::string, PLInterface> pl_spis_;
-    //std::map<std::string, PSI2C> ps_i2cs_;
-    std::vector<std::unique_ptr<PLI2C>> pli2c_;
-    std::vector<std::unique_ptr<PLSPI>> plspi_;
-    std::vector<std::unique_ptr<PSI2C>> psi2c_;
-    std::vector<std::unique_ptr<PSSPI>> psspi_;
-    PSXADC             psxadc_;
+    //Register reg_;
+    PSI2C   psi2c0_;
+    PSI2C   psi2c1_;
+    PSXADC  psxadc_;
 
 public:
     ZYNQ( uintptr_t base_addr );

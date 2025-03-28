@@ -53,7 +53,8 @@ static StaticQueue_t xStaticQueue;
 //===============================================================
 ZynqDetector::ZynqDetector( uint32_t base_addr
                           , std::unique_ptr<Network> net )
-    : base_addr_ ( base_addr )
+    : zynq_    ( base_addr      )
+    , network_ ( std::move(net) )
 {}
 /*
 //===============================================================
@@ -222,21 +223,6 @@ const TickType_t x1second = pdMS_TO_TICKS( DELAY_1_SECOND );
 	}
 }
 
-/*-----------------------------------------------------------*/
-static void prvRxTask( void *pvParameters )
-{
-char Recdstring[15] = "";
-
-	for( ;; )
-	{
-		/* Block to wait for data arriving on the queue. */
-		
-
-		/* Print the received data. */
-		xil_printf( "Rx task received string from Tx task: %s\r\n", Recdstring );
-		RxtaskCntr++;
-	}
-}
 
 /*-----------------------------------------------------------*/
 static void poll_timer_callback( TimerHandle_t pxTimer )

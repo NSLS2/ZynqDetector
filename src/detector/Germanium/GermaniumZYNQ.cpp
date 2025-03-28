@@ -20,8 +20,10 @@
 
 
 //-----------------------------------------
-ZYNQ::ZYNQ( uintptr_t base_addr )
-    : reg_( base_addr           )
+ZYNQ::GermaniumZYNQ()
+    , psi2c0_( std::make_unique<PSI2C>())
+    , psi2c1_( std::make_unique<PSI2C>())
+    , psxadc_( std::make_unique<PSXADC>())
 {}
 
 /*
