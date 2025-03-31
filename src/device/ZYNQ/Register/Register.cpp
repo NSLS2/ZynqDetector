@@ -35,6 +35,27 @@ uint32_t Register::read( uint32_t offset )
     return value;
 }
 
+void Register::multi_access_start()
+{
+    while( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdFALSE );
+}
+
+void Register::multi_access_write( uint32_t offset, uint32_t value )
+{
+    *(volatile uint32_t*)(base_addr_ + offset/4) = value;
+}
+    
+uint32_t Register::multi_access_read( uint32_t offset )
+{
+    return *(volatile uint32_t*)(base_addr_ + offset/4);
+}
+
+void Register::multi_access_end()
+{
+    xSemaphoreGive( mutex_ );
+}
+
+
 void Register::task()
 {
     RegisterAccessReq  req;

@@ -3,17 +3,17 @@
 #include "concepts.hpp"
 #include "queue.hpp"
 
-template < typename T_I2C >
-requires IsEitherType<T_I2C, PLI2C, PSI2C>
-class DAC7678
+template < typename T >
+requires IsEitherType<T, PLI2C, PSI2C>
+class DAC7678 : public I2CDevice<T>
 {
 private:
-    T_I2C&  i2c_;
-    uint8_t i2c_addr_;
-    std::unique_ptr<AccessReq> req_;
-    QueueHandle_t* req_queue_;
+    T&                         i2c_;
+    uint8_t                    i2c_addr_;
 
-    T_I2C_REQ req_;
+    std::unique_ptr<AccessReq> req_;
+    QueueHandle_t*             req_queue_;
+
     std::map<int, int> chan_assign_;  // stores <variable:channel>
                                       // defined by detector and passed to the constructor
 

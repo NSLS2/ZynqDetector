@@ -107,8 +107,8 @@ void PSI2C::task()
     PSI2CReq  req;
     PSI2CResp resp;
 
-    char rd_data[4];
-    char wr_data[4];
+    //char rd_data[4];
+    //char wr_data[4];
 
     while(1)
     {
