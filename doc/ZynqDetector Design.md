@@ -717,10 +717,10 @@ HV_CUR | AI | `I2C A-D Converter` | `#C1 S5 @12, 0` |  |  | LTC2309
 P1_CUR | AI | `I2C A-D Converter` | `#C1 S6 @12, 0` |  |  | LTC2309
 P2_CUR | AI | `I2C A-D Converter` | `#C1 S7 @12, 0` |  |  | LTC2309
 LK_MON | AI | `I2C A-D Converter` | `#C2 S0 @12, 0` |  |  | LTC2309
-TEMP1 | AI | `Tmp100 A-D Converter` | `@72` |  |  | 
-TEMP2 | AI | `Tmp100 A-D Converter` | `@73` |  |  | 
-TEMP3 | AI | `Tmp100 A-D Converter` | `@74` |  |  | 
-ztemp | AI | `ZTMP A-D Converter` | `@0` | | | ZYNQ
+TEMP1 | AI | `Tmp100 A-D Converter` | `@72` |  |  | TMP100
+TEMP2 | AI | `Tmp100 A-D Converter` | `@73` |  |  | TMP100
+TEMP3 | AI | `Tmp100 A-D Converter` | `@74` |  |  | TMP100
+ztemp | AI | `ZTMP A-D Converter` | `@0` | | | Zynq
 
 
 

@@ -22,17 +22,9 @@
 #define TIMER_CHECK_THRESHOLD 9
 /*-----------------------------------------------------------*/
 
-/* The Tx and Rx tasks as described at the top of this file. */
-/*-----------------------------------------------------------*/
 
-/* The queue used by the Tx and Rx tasks, as described at the top of this
-file. */
-static TaskHandle_t xTxTask;
-static TaskHandle_t xRxTask;
-static QueueHandle_t xQueue = NULL;
 static TimerHandle_t xPollTimer = NULL;
-char HWstring[15] = "Hello World";
-long RxtaskCntr = 0;
+
 
 #if (configSUPPORT_STATIC_ALLOCATION == 1)
 #define QUEUE_BUFFER_SIZE 100
@@ -45,22 +37,20 @@ StaticTimer_t xTimerBuffer;
 static StaticQueue_t xStaticQueue;
 #endif
 
-Germanium::Germanium()
-    : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>()                            )
-    , zynq_    ( base_addr_                                                      )
-    , i2c0_    ( zynq_.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)        )
-    , i2c1_    ( zynq_.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)        )
-    , ltc2309  ( psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign )
-    , dac7678  ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign       )
-    , tmp100_0_( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue                   )
-    , tmp100_1_( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue                   )
-    , tmp100_2_( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue                   )
+GermaniumDetector::GermaniumDetector()
+    : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>()                )
+    , zynq_       ( std::make_uniqure<GermaniumZynq>(base_addr_)                    )
+    , i2c0_       ( zynq_.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)        )
+    , i2c1_       ( zynq_.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)        )
+    , ltc2309     ( psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign )
+    , dac7678     ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign       )
+    , tmp100_0_   ( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue                   )
+    , tmp100_1_   ( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue                   )
+    , tmp100_2_   ( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue                   )
 {
-    // Create interfaces
-
     network_init(std::make_unique<GermaniumNetwork>(this));
 
-    reg_ = new GermaniumRegister();
+    //reg_ = new GermaniumRegister();
 
     ps_i2c0_ = std::make_shared<PSI2C>("I2C0");
     ps_i2c1_ = std::make_shared<PSI2C>("I2C1");
@@ -94,7 +84,7 @@ Germanium::Germanium()
 
 //===============================================================
 //===============================================================
-void register_access_request_proc(const UDPRxMsg &msg)
+void GermaniumDetector::register_access_request_proc(const UDPRxMsg &msg)
 {
     RegisterAccessRequest req;
     req.op = msg.op;
@@ -107,7 +97,7 @@ void register_access_request_proc(const UDPRxMsg &msg)
 //===============================================================
 // Only UDP tasks for GeDetector.
 //===============================================================
-void GeDetector::task_init()
+void GermaniumDetector::task_init()
 {
     xTaskCreate(udp_rx_task,
                 (const char *)"UDP_RX",
@@ -145,7 +135,7 @@ void GeDetector::task_init()
                 &psxadc_task_handler_ );
 }
 
-void Germanium::create_device_access_tasks()
+void GermaniumDetector::create_device_access_tasks()
 {
     reg_.create_register_single_access_task();
 
@@ -188,7 +178,7 @@ void Germanium::create_device_access_tasks()
 //===============================================================
 // Register multi-access task wrapper
 //===============================================================
-void Register::create_register_multi_access_task()
+void GermaniumDetector::create_register_multi_access_task()
 {
     auto task_func = std::make_unique<std::function<void()>>([this]() { register_multi_access_task(); });
     xTaskCreate( task_wrapper, "Register Single Access", 1000, &task_func, 1, NULL );
@@ -199,7 +189,7 @@ void Register::create_register_multi_access_task()
 //===============================================================
 // Register multi-access task
 //===============================================================
-void Germanium::register_multi_access_task()
+void GermaniumDetector::register_multi_access_task()
 {
     GermaniumAccessReq req;
 
@@ -234,7 +224,7 @@ void Germanium::register_multi_access_task()
 //===============================================================
 // Germanium queue init
 //===============================================================
-void Germanium::create_detector_queues()
+void GermaniumDetector::create_detector_queues()
 {
     psi2c_0_req_queue = xQueueCreate(5, sizeof(PSI2CReq));
     psi2c_1_req_queue = xQueueCreate(5, sizeof(PSI2CReq));
@@ -256,7 +246,7 @@ void Germanium::create_detector_queues()
 //===============================================================
 // Latch MARS configuration.
 //===============================================================
-void polling_task_init()
+void GermaniumDetector::polling_task_init()
 {
     poll_list.emplace_back( HV_RBV | 0x8000 );
     poll_list.emplace_back( HV_CURR | 0x8000  );
@@ -270,7 +260,7 @@ void polling_task_init()
 //===============================================================
 
 
-void polling_1s()
+void GermaniumDetector::polling_1s()
 {
     UDPRxMsg msg;
     
@@ -294,7 +284,7 @@ void polling_1s()
 //===============================================================
 // Latch MARS configuration.
 //===============================================================
-void Germanium::latch_conf()
+void GermaniumDetector::latch_conf()
 {
     reg_.write( GermaniumRegister::MARS_CONF_LOAD, 2 );
     reg_.write( GermaniumRegister::MARS_CONF_LOAD, 0 );
@@ -305,7 +295,7 @@ void Germanium::latch_conf()
 //===============================================================
 // Stuff MARS.
 //===============================================================
-void Germanium::stuff_mars()
+void GermaniumDetector::stuff_mars()
 {
     for ( int i = 0; i < 12; i++ )
     {
@@ -330,12 +320,12 @@ void Germanium::stuff_mars()
 //===============================================================
 // Update loads.
 //===============================================================
-void Germanium::update_loads( char* loads )
+void GermaniumDetector::update_loads( char* loads )
 {
     memcpy( loads_, loads, sizeof(loads_) );
 }
 
-void Germanium::send_spi_bit( int chip_sel, int val )
+void GermaniumDetector::send_spi_bit( int chip_sel, int val )
 {
     sda = val & 0x1;
 
@@ -360,7 +350,7 @@ void Germanium::send_spi_bit( int chip_sel, int val )
 //===============================================================
 // Load AD9252 registers.
 //===============================================================
-void Germanium::load_ad9252reg( int chip_sel, int addr, int data )
+void GermaniumDetector::load_ad9252reg( int chip_sel, int addr, int data )
 {
     int i, j, k;
 
@@ -394,7 +384,7 @@ void Germanium::load_ad9252reg( int chip_sel, int addr, int data )
 //===============================================================
 // Configure AD9252.
 //===============================================================
-int Germanium::ad9252_cfg( int chip_num, int addr, int data )
+int GermaniumDetector::ad9252_cfg( int chip_num, int addr, int data )
 {
 
     int chip_sel;
@@ -427,7 +417,7 @@ int Germanium::ad9252_cfg( int chip_num, int addr, int data )
 //===============================================================
 // Arm.
 //===============================================================
-void Germanium::zddm_arm( int mode, int val )
+void GermaniumDetector::zddm_arm( int mode, int val )
 {
     RegisterSingleAccessResp resp;
 

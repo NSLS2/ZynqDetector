@@ -10,8 +10,6 @@ private:
 
 protected:
     uint32_t udp_port_;
-    const uint16_t MAX_UDP_MSG_LENG = 4096;
-    const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
 
     uint8_t ip_addr_[4];
     uint8_t netmask_[4];
@@ -39,10 +37,29 @@ protected:
 
     virtual void rx_msg_proc();
     virtual void tx_msg_proc() = 0;
-
     
 
 public:
+
+    //------------------------------
+    // UDP message
+    //------------------------------
+    const uint16_t MAX_UDP_MSG_LENG = 4096;
+    const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
+    typedef struct
+    {
+        uint16_t id;
+        uint16_t op;
+        uint32_t data[MAX_UDP_MSG_DATA_LENG >> 2];
+    } UDPRxMsg;
+
+    typedef struct
+    {
+        uint16_t id;
+        uint16_t op;
+        uint32_t data[MAX_UDP_MSG_DATA_LENG >> 2];
+    } UDPTxMsg;
+
     explicit Network( ZynqDetector* owner, int udp_port );
     void network_init();
     void network_task_init();

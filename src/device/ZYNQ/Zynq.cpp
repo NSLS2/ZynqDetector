@@ -9,7 +9,7 @@
 #endif
 
 #include "Register.hpp"
-#include "ZYNQ.hpp"
+#include "Zynq.hpp"
 
 
 
@@ -20,12 +20,13 @@
 
 
 //-----------------------------------------
-ZYNQ::ZYNQ( uintptr_t base_addr )
-    : reg_( base_addr           )
+Zynq::Zynq( uintptr_t base_addr, ZynqDetector owner )
+    : reg_   ( base_addr )
+    , owner_ ( owner     )
 {}
 
 /*
-auto ZYNQ::add_pl_i2c( const std::string& name
+auto Zynq::add_pl_i2c( const std::string& name
                      , uint32_t instr_reg
                      , uint32_t wr_data_reg
                      , uint32_t rd_data_reg )
@@ -35,7 +36,7 @@ auto ZYNQ::add_pl_i2c( const std::string& name
                       std::forward_as_tuple( reg_, instr_reg, wr_data_reg, rd_data_reg ) );
 }
 
-void ZYNQ::add_pl_spi( const std::string& name
+void Zynq::add_pl_spi( const std::string& name
                      , uint32_t instr_reg
                      , uint32_t wr_data_reg
                      , uint32_t rd_data_reg )
@@ -45,18 +46,18 @@ void ZYNQ::add_pl_spi( const std::string& name
                     , std::forward_as_tuple( reg_, instr_reg, wr_data_reg, rd_data_reg ) );
 }
 */
-auto ZYNQ::add_ps_i2c_interface( uint32_t bus_index )
+auto Zynq::add_ps_i2c_interface( uint32_t bus_index )
 {
     return ps_i2cs_.emplace_back( bus_index );
 }
 
-I2CInterface* ZYNQ::get_pl_i2c_interface( const std::string& name )
+I2CInterface* Zynq::get_pl_i2c_interface( const std::string& name )
 {
     auto it = pl_i2c_interfaces_.find( name );
     return ( it !=pl_ i2c_interfaces_.end() ) ? &(it->second) : nullptr;
 }
 
-SPIInterface* ZYNQ::get_pl_spi_interface(const std::string& name)
+SPIInterface* Zynq::get_pl_spi_interface(const std::string& name)
 {
     auto it = pl_spi_interfaces_.find( name );
     return ( it != pl_spi_interfaces_.end() ) ? &(it->second) : nullptr;
@@ -71,7 +72,7 @@ SPIInterface* ZYNQ::get_pl_spi_interface(const std::string& name)
 //=========================================
 // Definitions for Linux
 //=========================================
-ZYNQ::ZYNQ(uint32_t axi_base_addr)
+Zynq::Zynq(uint32_t axi_base_addr)
     : axi_base_addr( axi_base_addr )
     , reg( nullptr )
     , reg_size( 0x10000 )
@@ -107,24 +108,24 @@ ZYNQ::ZYNQ(uint32_t axi_base_addr)
     }
 
     trace_reg( __func__
-             , ": ZYNQ object created at 0x"
+             , ": Zynq object created at 0x"
              , std::hex, static_cast<void*>(reg), std::dec );
 }
 
 //-----------------------------------------
 
-ZYNQ::~ZYNQ()
+Zynq::~Zynq()
 {
     if (reg != nullptr)
     {
         munmap( reg, reg_size );
     }
-    trace_reg( __func__, ": ZYNQ object destructed." );
+    trace_reg( __func__, ": Zynq object destructed." );
 }
 
 //-----------------------------------------
 
-void ZYNQ::reg_wr( size_t offset, uint32_t value )
+void Zynq::reg_wr( size_t offset, uint32_t value )
 {
     if (offset % sizeof(uint32_t) != 0) {
         throw std::runtime_error("Offset must be aligned to register size");
@@ -149,7 +150,7 @@ void ZYNQ::reg_wr( size_t offset, uint32_t value )
 
 //-----------------------------------------
 
-uint32_t ZYNQ::reg_rd(size_t offset)
+uint32_t Zynq::reg_rd(size_t offset)
 {
     uint32_t val;
     if (offset % sizeof(uint32_t) != 0)

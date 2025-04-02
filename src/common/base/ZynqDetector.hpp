@@ -39,78 +39,7 @@ protected:
     //                   Data types                   //
     //==================================================
 
-    //------------------------------
-    // UDP message
-    //------------------------------
-    const int MAX_UDP_MSG_DATA_LENG = 1024;
-    typedef struct
-    {
-        uint16_t id;
-        uint16_t op;
-        uint32_t data[];
-    } UDPRxMsg;
-
-    typedef struct
-    {
-        uint16_t id;
-        uint16_t op;
-        uint32_t data[];
-    } UDPTxMsg;
-
-    //------------------------------
-    // Access request
-    //------------------------------
-
-
-    typedef struct
-    {
-        uint16_t op;
-        bool     read;
-        uint8_t  device_addr;
-        uint16_t instr_reg_addr;
-        uint16_t data_reg_addr;
-        uint32_t data;
-    } PlInterfaceSingleAccessReq;
-
-    typedef struct
-    {
-        uint16_t op;
-        bool     read;
-        uint32_t leng;
-        uint8_t  device_addr;
-        uint16_t instr_reg_addr;
-        uint16_t data_reg_addr;
-        uint32_t data[4096/4 - 1];
-    } PlInterfaceMultiAccessReq;
-
-    typedef struct
-    {
-        uint16_t op;
-        uint32_t data;
-    } PSI2CAccessReq;
-    //------------------------------
-    // Access response
-    //------------------------------
-
-    typedef struct
-    {
-        uint16_t  op;
-        uint32_t  data;
-    } PlInterfaceSingleAccessResp;
-    
-    typedef struct
-    {
-        uint16_t op;
-        uint32_t leng;
-        uint32_t data[4096/4 - 1];
-    } PlInterfaceMultiAccessResp;
-
-    typedef struct
-    {
-        uint16_t op;
-        uint32_t data;
-    } PSI2CAccessResp;
-
+    /*
     //------------------------------
     // Task parameter
     //------------------------------
@@ -142,12 +71,11 @@ protected:
         void* read();
         void* write();
     } PlInterfaceMultiAccessTaskParam;
+    */
 
     //==================================================
     //                    Variables                   //
     //==================================================
-    //uint32_t base_addr_;
-
 
     //------------------------------
     // Interrupt
@@ -188,7 +116,7 @@ protected:
     QueueSetHandle_t resp_queue_set_;
         
     QueueHandle_t register_single_access_req_queue_  = NULL;
-    QueueHandle_t register_multi_access_resp_queue_  = NULL;
+    QueueHandle_t register_single_access_resp_queue_ = NULL;
     
     //------------------------------
     // Task handlers
@@ -196,14 +124,14 @@ protected:
     TaskHandle_t  udp_rx_task_handle_;
     TaskHandle_t  udp_tx_task_handle_;
     TaskHandle_t  register_single_access_task_handle_;
-    //TaskHandle_t  slow_access_task_handle_;
+    TaskHandle_t  slow_access_task_handle_;
 
     
     //------------------------------
     // Network
     //------------------------------
     std::unique_ptr<Network> network_;
-    Zynq zynq_;
+    //std::unique_ptr<Zynq>    zynq_;
 
     TimerHandle_t xPollTimer_ = NULL;
     std::vector<uint16_t> poll_list_{};  // PVs to be polled

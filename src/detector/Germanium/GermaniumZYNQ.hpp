@@ -23,9 +23,9 @@
 
 
 //=========================================
-// ZYNQ class
+// Zynq class
 //=========================================
-class GermaniumZYNQ : public ZYNQ
+class GermaniumZynq : public Zynq
 {
 private:
     //Register reg_;
@@ -33,8 +33,11 @@ private:
     PSI2C   psi2c1_;
     PSXADC  psxadc_;
 
+    std::vector<std::unique_ptr<PSI2C>> psi2c_;
+    PSXADC             psxadc_;
+
 public:
-    ZYNQ( uintptr_t base_addr );
+    Zynq( uintptr_t base_addr );
 
     //auto add_pl_i2c( const std::string& name, uint32_t instr_reg, uint32_t data_reg );
     //auto add_pl_spi( const std::string& name, uint32_t instr_reg, uint32_t data_reg );

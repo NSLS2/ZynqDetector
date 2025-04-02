@@ -99,8 +99,6 @@ ZynqDetector::ZynqDetector( void )
 
 void ZynqDetector::must_override()
 {
-    //std::cout << __PRETTY_FUNCTION__
-    //    << " for reference only. Implement it for the specific detector.\n" );
     log_error("For reference only. Implement it for the specific detector.\n" );
     exit();
 }
