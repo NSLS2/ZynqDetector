@@ -3,12 +3,13 @@
 #include <map>
 #include <cstdint>
 #include <variant>
+#include <memory>
 
 #include "concepts.hpp"
 #include "queue.hpp"
 
 template<typename T>
-class I2C
+class I2CDevice
 {
 protected:
     T&                         i2c_;
@@ -23,6 +24,15 @@ protected:
     virtual void pack_req() = 0;
 
 public:
+
+    struct I2CInfo
+    {
+        std::shared_ptr<I2C> i2c;
+        uint8_t              chan;
+    };
+
+    std::map<uint16_t, I2CInfo> chan_assign;
+
     I2CDevice( T&                  i2c
              , uint8_t             i2c_addr
              , bool                is_single_ended
