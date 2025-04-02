@@ -10,8 +10,13 @@
 #include "Logger.hpp"
 #include "XADC.hpp"
 
-PSXADC::PSXADC( std::string name )
-    : name_( name )
+PSXADC::PSXADC( const std::string name
+              , const QueueHandle_t req_queue
+              , const QueueHandle_t resp_queue
+              )
+              : name_       ( name       )
+              , req_queue_  ( req_queue  )
+              , resp_queue_ ( resp_queue )
 {
     int status;
     

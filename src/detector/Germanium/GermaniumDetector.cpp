@@ -40,20 +40,16 @@ static StaticQueue_t xStaticQueue;
 GermaniumDetector::GermaniumDetector()
     : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>()                )
     , zynq_       ( std::make_uniqure<GermaniumZynq>(base_addr_)                    )
-    , i2c0_       ( zynq_.add_ps_i2c(0, psi2c0_req_queue, psi2c0_resp_queue)        )
-    , i2c1_       ( zynq_.add_ps_i2c(1, psi2c1_req_queue, psi2c1_resp_queue)        )
-    , ltc2309     ( psi2c_1, LTC2309_I2C_ADDR, true, psi2c_1_req_queue, chan_assign )
-    , dac7678     ( psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign       )
-    , tmp100_0_   ( psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue                   )
-    , tmp100_1_   ( psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue                   )
-    , tmp100_2_   ( psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue                   )
+    , ltc2309_0_  ( std::make_shared<LTC2309<PSI2C>>(psi2c_1, LTC2309_0_I2C_ADDR, true, psi2c_1_req_queue, chan_assign) )
+    , ltc2309_1_  ( std::make_shared<LTC2309<PSI2C>>(psi2c_1, LTC2309_1_I2C_ADDR, true, psi2c_1_req_queue, chan_assign) )
+    , dac7678_    ( std::make_shared<DAC7678<PSI2C>>(psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign      ) )
+    , tmp100_0_   ( std::make_shared<TMP100<PSI2C>>(psi2c_0, TMP100_0_I2C_ADDR, psi2c_0_req_queue                   ) )
+    , tmp100_1_   ( std::make_shared<TMP100<PSI2C>>(psi2c_0, TMP100_1_I2C_ADDR, psi2c_0_req_queue                   ) )
+    , tmp100_2_   ( std::make_shared<TMP100<PSI2C>>(psi2c_0, TMP100_2_I2C_ADDR, psi2c_0_req_queue                   ) )
 {
     network_init(std::make_unique<GermaniumNetwork>(this));
 
     //reg_ = new GermaniumRegister();
-
-    ps_i2c0_ = std::make_shared<PSI2C>("I2C0");
-    ps_i2c1_ = std::make_shared<PSI2C>("I2C1");
 }
 
 //===============================================================

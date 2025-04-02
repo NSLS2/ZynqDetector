@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -27,14 +28,13 @@
 //=========================================
 class GermaniumZynq : public Zynq
 {
-private:
+protected:
     //Register reg_;
-    PSI2C   psi2c0_;
-    PSI2C   psi2c1_;
-    PSXADC  psxadc_;
+    std::shared_ptr<PSI2C>   psi2c0_;
+    std::shared_ptr<PSI2C>   psi2c1_;
+    std::shared_ptr<PSXADC>  psxadc_;
 
-    std::vector<std::unique_ptr<PSI2C>> psi2c_;
-    PSXADC             psxadc_;
+    
 
 public:
     Zynq( uintptr_t base_addr );

@@ -12,6 +12,30 @@ protected:
     void proc_register_multi_access_msg( const UDPRxMsg& msg );
     void proc_update_loads_msg( const char* loads );
 
+    //======================================
+    // Instruction map
+    //======================================
+    const std::map<int, std::function<void()>> instruction_map {
+        { MARS_CONF_LOAD, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+        { LEDS, [this]() { this->load_mars_conf(); } }
+      };  
+
 public:
     //===============================================================
     // Message/operation IDs
