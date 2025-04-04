@@ -38,8 +38,10 @@ static StaticQueue_t xStaticQueue;
 #endif
 
 GermaniumDetector::GermaniumDetector()
-    : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>()                )
-    , zynq_       ( std::make_uniqure<GermaniumZynq>(base_addr_)                    )
+    : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>(),                 )
+    , GermaniumZynq ( std::make_uniqure<GermaniumZynq>(base_addr_)
+                    , register_single_access_req_queue
+                    ,                     )
     , ltc2309_0_  ( std::make_shared<LTC2309<PSI2C>>(psi2c_1, LTC2309_0_I2C_ADDR, true, psi2c_1_req_queue, chan_assign) )
     , ltc2309_1_  ( std::make_shared<LTC2309<PSI2C>>(psi2c_1, LTC2309_1_I2C_ADDR, true, psi2c_1_req_queue, chan_assign) )
     , dac7678_    ( std::make_shared<DAC7678<PSI2C>>(psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign      ) )
@@ -110,21 +112,21 @@ void GermaniumDetector::task_init()
                 &udp_tx_task_handle_);
 
     xTaskCreate( psi2c_task,
-                 ( const char* ) "PS_I2C0"),
+                 ( const char* ) "PSI2C0"),
                  configMINIMAL_STACK_SIZE,
                  NULL,
                  tskIDLE_PRIORITY + 1,
                  &psi2c_0_task_handler_ );
 
     xTaskCreate( psi2c_task,
-                ( const char* ) "PS_I2C1"),
+                ( const char* ) "PSI2C1"),
                 configMINIMAL_STACK_SIZE,
                 NULL,
                 tskIDLE_PRIORITY + 1,
                 &psi2c_1_task_handler_ );
 
     xTaskCreate( psxadc_task,
-                ( const char* ) "PS_I2C0"),
+                ( const char* ) "PSXADC"),
                 configMINIMAL_STACK_SIZE,
                 NULL,
                 tskIDLE_PRIORITY + 1,

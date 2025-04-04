@@ -34,7 +34,9 @@ protected:
         { LEDS, [this]() { this->load_mars_conf(); } }
         { LEDS, [this]() { this->load_mars_conf(); } }
         { LEDS, [this]() { this->load_mars_conf(); } }
-      };  
+      };
+
+    friend Germanium
 
 public:
     //===============================================================
