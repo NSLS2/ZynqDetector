@@ -41,7 +41,14 @@ GermaniumDetector::GermaniumDetector()
     : ZynqDetector( 0x43C00000, std::make_unique<GermaniumNetwork>(),                 )
     , GermaniumZynq ( std::make_uniqure<GermaniumZynq>(base_addr_)
                     , register_single_access_req_queue
-                    ,                     )
+                    , register_single_access_resp_queue
+                    , psi2c_0_req_queue
+                    , psi2c_0_resp_queue
+                    , psi2c_1_req_queue
+                    , psi2c_1_resp_queue
+                    , psxadc_req_queue
+                    , psxadc_resp_queue
+                    )
     , ltc2309_0_  ( std::make_shared<LTC2309<PSI2C>>(psi2c_1, LTC2309_0_I2C_ADDR, true, psi2c_1_req_queue, chan_assign) )
     , ltc2309_1_  ( std::make_shared<LTC2309<PSI2C>>(psi2c_1, LTC2309_1_I2C_ADDR, true, psi2c_1_req_queue, chan_assign) )
     , dac7678_    ( std::make_shared<DAC7678<PSI2C>>(psi2c_1, DAC7678_I2C_ADDR, psi2c_1_req_queue, chan_assign      ) )
