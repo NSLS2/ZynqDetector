@@ -69,9 +69,9 @@ protected:
         { VH1, std::make_pair( dac7678_, 2 ) },
         { VL2, std::make_pair( dac7678_, 3 ) },
         { VH2, std::make_pair( dac7678_, 4 ) },
-        { HV, std::make_pair( dac7678_, 5 ) },
-        { P1, std::make_pair( dac7678_, 6 ) },
-        { P2, std::make_pair( dac7678_, 7 ) };
+        { HV,  std::make_pair( dac7678_, 5 ) },
+        { P1,  std::make_pair( dac7678_, 6 ) },
+        { P2,  std::make_pair( dac7678_, 7 ) };
 
     // ADC process map: <op, <device, channel>>
     const std::map<uint16_t, std::pair<std::shared_ptr<LTC2309<PSI2C>>, uint8_t>> adc_instr_map = 
