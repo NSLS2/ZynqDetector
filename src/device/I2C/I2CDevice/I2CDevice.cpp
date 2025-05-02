@@ -26,10 +26,10 @@ I2CDevice::I2CDevice( const T&                           i2c
 // Requires the ID of the physical variable.
 //============================================
 template<typename T>
-void I2C<T>::write( const uint16_t variable, const uint8_t data )
+void I2CDevice<T>::write( const uint16_t op, const uint8_t data )
 requires IsSameType<T, PSI2C>
 {
-    if( chan_assign_.find(variable) != chan_assign_.end() )
+    if( chan_assign_.find(op) != chan_assign_.end() )
     {
         pack_req();
         
@@ -49,7 +49,7 @@ requires IsSameType<T, PSI2C>
 // Requires the ID of the physical variable.
 //============================================
 template<typename T>
-void I2C<T>::read( uint8_t chan )
+void I2CDevice<T>::read( uint16_t op )
 requires IsSameType<T, PSI2C>
 {
     if( chan_assign_.find(var) != chan_assign_.end() )

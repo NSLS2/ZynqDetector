@@ -31,58 +31,13 @@ public:
 
 
 template< typename Derived >
-class ZynqDetector : public FPGA
+class ZynqDetector
 {
 protected:
 
     //==================================================
-    //                   Data types                   //
-    //==================================================
-
-    /*
-    //------------------------------
-    // Task parameter
-    //------------------------------
-    typedef struct
-    {
-        QueueHandle_t* reg_access_req_queue;
-        QueueHandle_t* interface_single_access_req_queue;
-        QueueHandle_t* interface_multi_access_req_queue;
-    } UDPRxTaskParam;
-
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-    } SingleRegisterAccessTaskParam;
-
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-        void* read();
-        void* write();
-    } PlInterfaceSingleAccessTaskParam;
-
-    typedef struct
-    {
-        QueueHandle_t* req_queue;
-        QueueHandle_t* resp_queue;
-        void* read();
-        void* write();
-    } PlInterfaceMultiAccessTaskParam;
-    */
-
-    //==================================================
     //                    Variables                   //
     //==================================================
-
-    //------------------------------
-    // Interrupt
-    //------------------------------
-    XScuGic gic_;                               // Global Interrupt Controller
-    std::map<int, TaskHandle_t> irq_task_map_;  // IRQ task map as an instance member
-
 
     //------------------------------
     // Queues
@@ -111,12 +66,13 @@ protected:
     const size_t PL_INTERFACE_MULTI_ACCESS_RESP_QUEUE_SIZE = PL_INTERFACE_MULTI_ACCESS_RESP_QUEUE_LENG
                                                            * sizeof( PlInterfaceMultiAccessResp );
     */
-
-    QueueSetMemberHandle_t active_resp_queue_;
-    QueueSetHandle_t resp_queue_set_;
-        
+    // Queue handlers
     QueueHandle_t register_single_access_req_queue_  = NULL;
     QueueHandle_t register_single_access_resp_queue_ = NULL;
+
+    QueueSetMemberHandle_t active_resp_queue_;
+    QueueSetHandle_t       resp_queue_set_;
+        
     
     //------------------------------
     // Task handlers
@@ -131,7 +87,7 @@ protected:
     // Network
     //------------------------------
     std::unique_ptr<Network> network_;
-    //std::unique_ptr<Zynq>    zynq_;
+    std::unique_ptr<Zynq>    zynq_;
 
     TimerHandle_t xPollTimer_ = NULL;
     std::vector<uint16_t> poll_list_{};  // PVs to be polled

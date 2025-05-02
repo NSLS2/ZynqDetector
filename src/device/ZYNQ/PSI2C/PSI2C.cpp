@@ -4,10 +4,10 @@
 
 #include "PSI2C.hpp"
 
-PSI2C::PSI2C( uint8_t bus_index
-            , std::string name
-            , QueueHandle_t req_queue
-            , QueueHandle_t resp_queue );
+PSI2C::PSI2C( const int8_t       bus_index
+            , const std::string  name
+            , const ueueHandle_t req_queue
+            , const ueueHandle_t resp_queue );
     : bus_index_  ( bus_index  )
     , name_       ( name       )
     , req_queue_  ( req_queue  )

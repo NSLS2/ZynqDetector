@@ -1,6 +1,6 @@
-#include <atomic>
-#include <chrono>
-#include <thread>
+//#include <atomic>
+//#include <chrono>
+//#include <thread>
 
 #ifdef __LINUX__
 #include <sys/mman.h>
@@ -20,14 +20,18 @@
 
 
 //-----------------------------------------
-GermaniumZynq::GermaniumZynq()
-    : Zynq   ( 0x43C00000                 )
-    , psi2c0_( std::make_unique<PSI2C>()  )
-    , psi2c1_( std::make_unique<PSI2C>()  )
-    , psxadc_( std::make_unique<PSXADC>() )
-{
-    
-}
+GermaniumZynq::GermaniumZynq( const QueueHandle_t psi2c0_req_queue
+                            , const QueueHandle_t psi2c0_resp_queue
+                            , const QueueHandle_t psi2c1_req_queue
+                            , const QueueHandle_t psi2c1_resp_queue
+                            , const QueueHandle_t psxadc_req_queue
+                            , const QueueHandle_t psxadc_resp_queue
+                            )
+    : Zynq   ( 0x43C00000                                                                  )
+    , psi2c0_( std::make_shared<PSI2C>( 0, "psi2c0", psi2c0_req_queue, psi2c0_resp_queue ) )
+    , psi2c1_( std::make_shared<PSI2C>( 1, "psi2c1", psi2c1_req_queue, psi2c1_resp_queue ) )
+    , psxadc_( std::make_shared<PSXADC>( "psxadc", psxadc_req_queue, psxadc_resp_queue   ) )
+{}
 
 /*
 auto Zynq::add_pl_i2c( const std::string& name

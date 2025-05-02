@@ -20,7 +20,7 @@ protected:
     QueueHandle_t              req_queue_;
     bool                       is_single_ended_;
 
-    std::map<int, int> chan_assign_;  // stores <variable:channel>
+    std::map<int, std::uint8_t> chan_assign_;  // stores <variable:channel>
                                       // defined by detector and passed to the constructor
 
 public:
