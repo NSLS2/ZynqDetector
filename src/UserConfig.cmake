@@ -10,6 +10,7 @@ cmake_minimum_required(VERSION 3.16)
 # Add any compiler definitions, they will be added as extra definitions
 # Example : Adding VERBOSE=1 will pass -DVERBOSE=1 to the compiler.
 set(USER_COMPILE_DEFINITIONS
+""
 )
 
 # Undefine any previously specified compiler definitions, either built in or provided with a -D option
@@ -25,54 +26,87 @@ set(USER_UNDEFINED_SYMBOLS
 # Example 3: Adding ${CMAKE_SOURCE_DIR}/data/include to add data/include from this project.
 
 set(USER_INCLUDE_DIRECTORIES
+${CMAKE_CURRENT_SOURCE_DIR}
+${CMAKE_CURRENT_SOURCE_DIR}/common/base
+${CMAKE_CURRENT_SOURCE_DIR}/common/concepts
+${CMAKE_CURRENT_SOURCE_DIR}/common/log
+${CMAKE_CURRENT_SOURCE_DIR}/common/queue
+${CMAKE_CURRENT_SOURCE_DIR}/common/task_wrap
+${CMAKE_CURRENT_SOURCE_DIR}/device/Adc/Ad9252
+${CMAKE_CURRENT_SOURCE_DIR}/device/Adc/Ltc2309
+${CMAKE_CURRENT_SOURCE_DIR}/device/Dac/Dac7678
+${CMAKE_CURRENT_SOURCE_DIR}/device/I2cDevice
+${CMAKE_CURRENT_SOURCE_DIR}/device/Mars
+${CMAKE_CURRENT_SOURCE_DIR}/device/Zddm
+${CMAKE_CURRENT_SOURCE_DIR}/device/Temperature/Tmp100
+${CMAKE_CURRENT_SOURCE_DIR}/device/Network
+${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq
+#${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/I2cBus
+#${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/PlInterface
+#${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/PlI2c
+#${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/PlSpi
+${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/PsI2c
+${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/PsXadc
+${CMAKE_CURRENT_SOURCE_DIR}/device/Zynq/Register
+${CMAKE_CURRENT_SOURCE_DIR}/detector/Germanium
 )
 set(USER_COMPILE_SOURCES
-"zynq_detector.cpp"
-"udp_rx.cpp"
-"udp_tx.cpp"
-"fpga.cpp"
-"hello_detector.cpp"
-"zynq_detector_network.cpp"
+"detector_main.cpp"
+"common/log/Logger.cpp"
+"common/task_wrap/task_wrap.cpp"
+#"device/Adc/Ltc2309/Ltc2309.cpp"
+#"device/Dac/Dac7678/Dac7678.cpp"
+#"device/I2cDevice/I2cDevice.cpp"
+#"device/Temperature/Tmp100/Tmp100.cpp"
+#"device/Zynq/I2cBus/I2cBus.cpp"
+"device/Zynq/Register/Register.cpp"
+"device/Zynq/PsI2c/PsI2c.cpp"
+"device/Zynq/PsXadc/PsXadc.cpp"
+#"device/Zynq/Zynq.cpp"
+"detector/Germanium/GermaniumDetector.cpp"
+"detector/Germanium/GermaniumNetwork.cpp"
+"detector/Germanium/GermaniumZynq.cpp"
 )
+
 
 # -----------------------------------------
 
 # Turn on all optional warnings (-Wall)
-set(USER_COMPILE_WARNINGS_ALL "-Wall")
+set(USER_COMPILE_WARNINGS_ALL -Wall)
 
 # Enable extra warning flags (-Wextra)
-set(USER_COMPILE_WARNINGS_EXTRA "-Wextra")
+set(USER_COMPILE_WARNINGS_EXTRA -Wextra)
 
 # Make all warnings into hard errors (-Werror)
-set(USER_COMPILE_WARNINGS_AS_ERRORS "")
+set(USER_COMPILE_WARNINGS_AS_ERRORS )
 
 # Check the code for syntax errors, but don't do anything beyond that (-fsyntax-only)
-set(USER_COMPILE_WARNINGS_CHECK_SYNTAX_ONLY "")
+set(USER_COMPILE_WARNINGS_CHECK_SYNTAX_ONLY )
 
 # Issue all the mandatory diagnostics listed in the C standard (-pedantic)
-set(USER_COMPILE_WARNINGS_PEDANTIC "")
+set(USER_COMPILE_WARNINGS_PEDANTIC )
 
 # Issue all the mandatory diagnostics, and make all mandatory diagnostics into errors. (-pedantic-errors)
-set(USER_COMPILE_WARNINGS_PEDANTIC_AS_ERRORS "")
+set(USER_COMPILE_WARNINGS_PEDANTIC_AS_ERRORS )
 
 # Suppress all warnings (-w)
-set(USER_COMPILE_WARNINGS_INHIBIT_ALL "")
+set(USER_COMPILE_WARNINGS_INHIBIT_ALL )
 
 # -----------------------------------------
 
 # Optimization level   "-O0" [None], "-O1" [Optimize] , "-O2" [Optimize More], "-O3" [Optimize Most] or "-Os" [Optimize Size]
-set(USER_COMPILE_OPTIMIZATION_LEVEL "-O0")
+set(USER_COMPILE_OPTIMIZATION_LEVEL -O0)
 
 # Other flags related to optimization
-set(USER_COMPILE_OPTIMIZATION_OTHER_FLAGS "")
+set(USER_COMPILE_OPTIMIZATION_OTHER_FLAGS )
 
 # -----------------------------------------
 
 # Debug level "" [None], "-g1" [Minimum], "g2" [Default], "g3" [Maximum]
-set(USER_COMPILE_DEBUG_LEVEL "-g3")
+set(USER_COMPILE_DEBUG_LEVEL -g3)
 
 # Other flags related to debugging
-set(USER_COMPILE_DEBUG_OTHER_FLAGS "")
+set(USER_COMPILE_DEBUG_OTHER_FLAGS )
 
 # -----------------------------------------
 
@@ -82,30 +116,30 @@ set(USER_COMPILE_DEBUG_OTHER_FLAGS "")
 # -----------------------------------------
 
 # Verbose (-v)
-set(USER_COMPILE_VERBOSE "")
+set(USER_COMPILE_VERBOSE )
 
 # Support ANSI_PROGRAM (-ansi)
-set(USER_COMPILE_ANSI "")
+set(USER_COMPILE_ANSI )
 
 # Add any compiler options that are not covered by the above variables, they will be added as extra compiler options
 # To enable profiling -pg [ for gprof ]  or -p [ for prof information ]
-set(USER_COMPILE_OTHER_FLAGS "")
+set(USER_COMPILE_OTHER_FLAGS )
 
 # -----------------------------------------
 
 # Linker options
 # Do not use the standard system startup files when linking.
 # The standard system libraries are used normally, unless -nostdlib or -nodefaultlibs is used. (-nostartfiles)
-set(USER_LINK_NO_START_FILES "")
+set(USER_LINK_NO_START_FILES )
 
 # Do not use the standard system libraries when linking. (-nodefaultlibs)
-set(USER_LINK_NO_DEFAULT_LIBS "")
+set(USER_LINK_NO_DEFAULT_LIBS )
 
 # Do not use the standard system startup files or libraries when linking. (-nostdlib)
-set(USER_LINK_NO_STDLIB "")
+set(USER_LINK_NO_STDLIB )
 
 # Omit all symbol information. (-s)
-set(USER_LINK_OMIT_ALL_SYMBOL_INFO "")
+set(USER_LINK_OMIT_ALL_SYMBOL_INFO )
 
 
 # -----------------------------------------

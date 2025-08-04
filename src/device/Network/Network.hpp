@@ -2,66 +2,108 @@
 
 #include <cstdint>
 #include <memory>
+#include <atomic>
+#include <functional>
+#include <any>
+#include <map>
 
+extern "C" {
+#include "lwip/sockets.h"
+#include "lwip/netif.h"
+#include "lwip/inet.h"
+
+//#include "lwipopts.h"
+//#include "lwip/ip_addr.h"
+//#include "lwip/err.h"
+//#include "lwip/udp.h"
+//#include "lwip/sys.h"
+//#include "lwip/init.h"
+
+#include "netif/xadapter.h"
+#include "errno.h"
+#include "xparameters.h"
+}
+
+//#include "ZynqDetector.hpp"
+#include "Logger.hpp"
+
+template < typename DerivedNetwork >
 class Network
 {
+
+public:
+
+    static constexpr uint32_t UDP_PORT        = 0x7000;
+    static constexpr uint32_t UDP_REQ_MSG_ID  = 0xCAFE;
+    static constexpr uint32_t UDP_RESP_MSG_ID = 0xBEEF;
+    //------------------------------
+    // UDP message
+    //------------------------------
+    static constexpr uint16_t MAX_UDP_MSG_LENG = 4096;
+    static constexpr uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
+
+    struct UdpReqMsg
+    {   
+        uint16_t                           id; 
+        uint16_t                           op;
+        DerivedNetwork::UdpReqMsgPayload   payload;
+    };  
+    using UdpRxMsg = UdpReqMsg;
+
+    struct UdpRespMsg
+    {
+        uint16_t                           id;
+        uint16_t                           op;
+        DerivedNetwork::UdpRespMsgPayload  payload;
+    };
+    using UdpTxMsg = UdpRespMsg;
+
+
+    explicit Network( const Logger& logger  );
+    void network_init();
+    void create_network_tasks();
+
 private:
-    ZynqDetector* owner_;
+    const Logger& logger_;
 
 protected:
-    uint32_t udp_port_;
 
-    uint8_t ip_addr_[4];
-    uint8_t netmask_[4];
-    uint8_t gateway_[4];
-    uint8_t dns_[4];
+    struct netif netif_;
+    int    sock_;
+    struct sockaddr_in local_addr_;
+
+    //uint8_t ip_addr_[4];
+    //uint8_t netmask_[4];
+    //uint8_t gateway_[4];
+    //uint8_t dns_[4];
     uint8_t mac_addr_[6];
 
-    Socket_t xUDPSocket;
+//    socket_t xUDPSocket;
 
-    std::atomic<bool> svr_ip_addr_lock_ {false};
-    uint8_t svr_ip_addr_[4];
+    alignas(64) std::atomic<uint32_t> remote_ip_addr_;
 
     int32_t udp_socket_;
 
     using MessageHandler = std::function<void(std::any&)>;
     std::map<int, MessageHandler> rx_msg_map_;
 
-    virtual msg_map_init() = 0;
+    void msg_map_init();
 
     void read_network_config( const std::string& filename );
+    static void tcpip_init_done( void *arg );
     bool string_to_addr( const std::string& addr_str, uint8_t* addr );
+
+    TaskHandle_t udp_rx_task_handle_;
+    TaskHandle_t udp_tx_task_handle_;
     
-    virtual void udp_rx_task();
-    virtual void udp_tx_task();
+    //void create_network_tasks();
+    void udp_rx_task();
+    void udp_tx_task();
 
-    virtual void rx_msg_proc();
-    virtual void tx_msg_proc() = 0;
+    void rx_msg_proc( UdpRxMsg& msg );
+    //virtual void tx_msg_proc() = 0;
     
 
-public:
-
-    //------------------------------
-    // UDP message
-    //------------------------------
-    const uint16_t MAX_UDP_MSG_LENG = 4096;
-    const uint16_t MAX_UDP_MSG_DATA_LENG = MAX_UDP_MSG_LENG - 4; // length of message data in bytes
-    typedef struct
-    {
-        uint16_t id;
-        uint16_t op;
-        uint32_t data[MAX_UDP_MSG_DATA_LENG >> 2];
-    } UDPRxMsg;
-
-    typedef struct
-    {
-        uint16_t id;
-        uint16_t op;
-        uint32_t data[MAX_UDP_MSG_DATA_LENG >> 2];
-    } UDPTxMsg;
-
-    explicit Network( ZynqDetector* owner, int udp_port );
-    void network_init();
-    void network_task_init();
 };
  
+ #include "Network.tpp"
