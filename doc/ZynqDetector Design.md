@@ -1342,7 +1342,33 @@ void Tmp100::read( std::string dev )
 
 #### A3.1 Data Types
 
-- ##### Queue
+##### A3.1.1 Requests
+
+- `RegisterMultiAccessRequestData` / `RegisterMultiAccessRequestDataStruct`
+
+```c++
+union RegisterMultiAccessRequestDataStruct
+{   
+    ZddmArm    zddm_arm_data;
+    Ad9252Cfg  ad9252_cfg_data;
+};  
+using RegisterMultiAccessRequestData = RegisterMultiAccessRequestDataStruct;
+```
+
+- `RegisterMultiAccessRequest` / `RegisterMultiAccessRequestStruct`
+
+```c++
+struct RegisterMultiAccessRequestStruct
+{   
+    uint16_t  op; 
+    char      data[sizeof(RegisterMultiAccessRequestData)];
+};  
+using RegisterMultiAccessRequest = RegisterMultiAccessRequestStruct;
+```
+
+##### A3.1.2 Responses
+
+##### A3.1.3 Queues
 
 ```c++
 QueueHandle_t
@@ -1351,11 +1377,88 @@ QueueSetHandle_t
 
 ```
 
-- ##### Tasks
+##### A3.1.4 Tasks
 
 ```c++
 TaskHandle_t
 
+```
+
+#### A3.1.3 Messages
+
+- `Ad9252Cfg` / `Ad9252CfgStruct`
+```c++
+struct Ad9252CfgStruct
+{
+    uint16_t  chip_num;
+    uint16_t  addr;
+    uint32_t  data;
+};
+using Ad9252Cfg = Ad9252CfgStruct;
+```
+
+- `ZddmArm` / `ZddmArmStruct`
+
+```c++
+struct ZddmArmStruct
+{
+    uint16_t  mode;
+    uint16_t  val;
+};
+using ZddmArm = ZddmArmStruct;
+```
+
+- `UdpRxMsgPayloadStruct`/`UdpRxMsgPayload`
+
+```c++
+union UdpRxMsgPayloadStruct
+{   
+    uint32_t   reg_single_acc_req_data;
+    uint32_t   loads[12][14];
+    ZddmArm    zddm_arm_data;
+    Ad9252Cfg  ad9252_cfg_data;
+    uint32_t   i2c_acc_req_data;
+    uint32_t   xadc_acc_req_data;
+};  
+using UdpRxMsgPayload = UdpRxMsgPayloadStruct;
+```
+
+- `UdpRxMsgStruct`/`UdpRxMsg`
+
+```c++
+struct UdpRxMsgStruct
+{   
+    uint16_t  id; 
+    uint16_t  op; 
+    char      payload[sizeof(DerivedNetwork::UdpRxMsgPayload)];
+};  
+using UdpRxMsg = UdpRxMsgStruct;
+
+```
+
+
+- `UdpTxMsgStruct`/`UdpTxMsg`
+
+```c++
+struct UdpTxMsgStruct
+{
+    uint16_t  id;
+    uint16_t  op;
+    char      payload[sizeof(DerivedNetwork::UdpTxMsgPayload)];
+};
+using UdpTxMsg = UdpTxMsgStruct;
+```
+
+- `UdpTxMsgPayloadStruct`/`UdpTxMsgPayload`
+
+```c++
+union UdpTxMsgPayloadStruct
+{
+    uint32_t  register_single_access_response_data;
+    uint32_t  psi2c_access_response_data;
+    uint32_t  psxadc_access_response_data;
+};
+using UdpTxMsgPayload = UdpTxMsgPayloadStruct;
 ```
 
 
