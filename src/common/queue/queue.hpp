@@ -1,14 +1,27 @@
+/**
+ * @file queue.hpp
+ * @brief Constants and data types for requests/responses.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
 #pragma once
+
+//===========================================================================//
 
 #include <cstdint>
 #include <type_traits>  // for std::is_same
 
-class PsI2c;
-//class PlI2c;
+//===========================================================================//
 
-//====================================
-// Requests
-//====================================
+class PsI2c;
+
+//===========================================================================//
+
+///< Requests
 
 const uint16_t WRITE = 0;
 const uint16_t READ  = 1;
@@ -75,10 +88,9 @@ struct AccessReqTypeSelector<PsI2c>
     using type = PsI2cAccessReq;
 };
 
+//===========================================================================//
 
-//====================================
-// Responses
-//====================================
+///< Responses
 
 //-----------------------------
 

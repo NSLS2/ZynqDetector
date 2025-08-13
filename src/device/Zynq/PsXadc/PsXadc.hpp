@@ -1,5 +1,6 @@
 #pragma once
 
+#include "task.h"
 #include <xadcps.h>
 
 #include "queue.hpp"
@@ -27,6 +28,12 @@ private:
     std::string    name_;
     QueueHandle_t  req_queue_;
     QueueHandle_t  resp_queue_;
+
+    static constexpr UBaseType_t TASK_PRIORITY   = 5;
+    static constexpr uint32_t    TASK_STACK_SIZE = 1000;
+    StaticTask_t                 task_tcb_;
+    StackType_t                  task_stack_[TASK_STACK_SIZE];
+    TaskConfig                   task_cfg_;
 
     XAdcPs         xadc_instance_ptr_;
     XAdcPs_Config* xadc_config_;

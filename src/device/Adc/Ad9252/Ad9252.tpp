@@ -1,7 +1,21 @@
+/**
+ * @file Ad9252.cpp
+ * @brief Member function definitions of `Ad9252`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
 
-//=======================================================================
-//=======================================================================
+//===========================================================================//
 
+/**
+ * @brief Ad9252 constructor.
+ * @param reg Reference to the register.
+ * @param ad9252_access_req_queue Queue for passing AD9252 access requests.
+ */
 template<typename DerivedNetwork>
 Ad9252<DerivedNetwork>::Ad9252( Register&            reg
                               , QueueHandle_t const  ad9252_access_req_queue
@@ -9,22 +23,29 @@ Ad9252<DerivedNetwork>::Ad9252( Register&            reg
                               : reg_              ( reg                     )
                               , req_queue_ ( ad9252_access_req_queue )
 {}
-//=======================================================================
 
+//===========================================================================//
 
-//=======================================================================
-//=======================================================================
+/**
+ * @brief Set clock skew.
+ * @param chipnum Chip (AD9252) number.
+ * @param skew Clock skew.
+ */
 template<typename DerivedNetwork>
 void Ad9252<DerivedNetwork>::set_clk_skew ( int chip_num, int skew )
 {
     ad9252_cnfg( chip_num, 22, skew );  /* clock skew adjust */
     ad9252_cnfg( chip_num, 255, 1 ); /* latch regs */
 }
-//=======================================================================
 
+//===========================================================================//
 
-//=======================================================================
-//=======================================================================
+/**
+ * @brief Configure AD9252. Currently it sets clock skew.
+ * @param chip_num Chip (AD9252) number.
+ * @param addr Address.
+ * @param val Configuration value. Currently it is clock skew.
+ */
 template<typename DerivedNetwork>
 void Ad9252<DerivedNetwork>::ad9252_cnfg( int chip_num, int addr, int val )
 {
@@ -44,21 +65,23 @@ void Ad9252<DerivedNetwork>::ad9252_cnfg( int chip_num, int addr, int val )
         default:
             chip_sel = 0b00000;
     }
-    reg_.multi_access_start();
     
-    reg_.multi_access_write( DerivedNetwork::ADC_SPI, chip_sel );
+    reg_.write( DerivedNetwork::ADC_SPI, chip_sel );
     
     load_reg( chip_sel, addr, val );
     
-    reg_.multi_access_write( DerivedNetwork::ADC_SPI, 0b11100 );
+    reg_.write( DerivedNetwork::ADC_SPI, 0b11100 );
 
-    reg_.multi_access_end();
 }
-//=======================================================================
 
+//===========================================================================//
 
-//=======================================================================
-//=======================================================================
+/**
+ * @brief Load data to register
+ * @param chip_sel Chip select value, generated from chip number.
+ * @param addr Address.
+ * @param data Data to be loaded to the register.
+ */
 template<typename DerivedNetwork>
 void Ad9252<DerivedNetwork>::load_reg( int chip_sel, int addr, int data )
 {
@@ -67,6 +90,8 @@ void Ad9252<DerivedNetwork>::load_reg( int chip_sel, int addr, int data )
     // small delay
     for (i = 0; i < 100; i++)
         ;
+
+    reg_.multi_access_start();
 
     // Read/Write bit
     send_spi_bit( chip_sel, 0 );
@@ -83,15 +108,20 @@ void Ad9252<DerivedNetwork>::load_reg( int chip_sel, int addr, int data )
     for (i = 7; i >= 0; i--)
         send_spi_bit( chip_sel, data >> i );
 
+    reg_.multi_access_end();
+
     // small delay
     for (i = 0; i < 100; i++)
         ;
 }
-//=======================================================================
 
+//===========================================================================//
 
-//=======================================================================
-//=======================================================================
+/**
+ * @brief Send SPI bit.
+ * @param chip_sel Chip select value.
+ * @param val Value to be sent.
+ */
 template<typename DerivedNetwork>
 void Ad9252<DerivedNetwork>::send_spi_bit( int chip_sel, int val )
 {
@@ -111,30 +141,36 @@ void Ad9252<DerivedNetwork>::send_spi_bit( int chip_sel, int val )
     reg_.multi_access_write( DerivedNetwork::ADC_SPI, (chip_sel | 0) );
 
 }
-//=======================================================================
 
+//===========================================================================//
 
-//=======================================================================
-//=======================================================================
+/**
+ * @brief Create AD9252 access task.
+ */
 template<typename DerivedNetwork>
 void Ad9252<DerivedNetwork>::create_device_access_tasks()
 {
-    auto task_func = std::make_unique<std::function<void()>>([this]() { ad9252_cfg_task(); });
-    xTaskCreate( task_wrapper
+    task_cfg_ = { .entry = [](void* ctx) { static_cast<Ad9252<DerivedNetwork>*>(ctx)->task(); },
+                  .context = this
+                };
+
+    xTaskCreateStatic( task_wrapper
                , "AD9252 Cfg"
-               , 1000
-               , &task_func
+               , TASK_STACK_SIZE
+               , &task_cfg_
                , 1
-               , NULL
+               , task_stack_
+               , &task_tcb_
                );
 }
-//=======================================================================
 
+//===========================================================================//
 
-//=======================================================================
-//=======================================================================
+/**
+ * @brief AD9252 access task function.
+ */
 template<typename DerivedNetwork>
-void Ad9252<DerivedNetwork>::ad9252_cfg_task()
+void Ad9252<DerivedNetwork>::task()
 {
     Ad9252AccessReq  req;
 
@@ -148,4 +184,5 @@ void Ad9252<DerivedNetwork>::ad9252_cfg_task()
         set_clk_skew( req.chip_num, req.data );
     }
 }
-//=======================================================================
+
+//===========================================================================//

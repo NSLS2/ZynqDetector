@@ -19,5 +19,5 @@ I2cBus::I2cBus( uint8_t       bus_index
 static void I2cBus::create_i2cbus_task()
 {
     auto task_func = std::make_unique<std::function<void()>>([this]() { task(); });
-    xTaskCreate( task_wrapper, name_.c_str(), 1000, &task_func, 1, NULL );
+    xTaskCreateStatic( task_wrapper, name_.c_str(), TASK_STACK_SIZE, &task_func, 1, task_stack, &task_tcb );
 }

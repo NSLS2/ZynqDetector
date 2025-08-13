@@ -1,16 +1,32 @@
+/**
+ * @file GermaniumDetector.cpp
+ * @brief Member function definitions of `GermaniumDetector`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
+
+//===========================================================================//
+
 #include <cstdint>
 #include <functional>
 
 #include "FreeRTOS.h"
+#include "task.h"
 #include "xil_printf.h"
 
 #include "task_wrap.hpp"
 
 #include "Register.hpp"
 
-//=========================================
-// Register class
-//=========================================
+//===========================================================================//
+
+/**
+ * @brief Register constructor.
+ */
 Register::Register
     (
       uintptr_t            base_addr
@@ -30,9 +46,11 @@ Register::Register
     }
 }
 
-//=========================================
-// Register single access
-//=========================================
+//===========================================================================//
+
+/**
+ * @brief Register single write.
+ */
 void Register::write( uint16_t offset, uint32_t value )
 {
     if ( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdTRUE )
@@ -42,6 +60,11 @@ void Register::write( uint16_t offset, uint32_t value )
     }
 }
     
+//===========================================================================//
+
+/**
+ * @brief Register single read.
+ */
 uint32_t Register::read( uint16_t offset )
 {
     uint32_t value = 0;
@@ -53,43 +76,67 @@ uint32_t Register::read( uint16_t offset )
     return value;
 }
 
+//===========================================================================//
+
+/**
+ * @brief Register single read.
+ */
 void Register::set_status( uint32_t status )
 {
     write( 0xC, status );
 }
 
-//=========================================
-// Register multiple access
-//=========================================
+//===========================================================================//
+
+/**
+ * @brief Start register multiple access.
+ */
 void Register::multi_access_start()
 {
     while( xSemaphoreTake( mutex_, portMAX_DELAY ) == pdFALSE );
 }
 
+//===========================================================================//
+
+/**
+ * @brief Register multiple write.
+ */
 void Register::multi_access_write( uint16_t offset, uint32_t value )
 {
     *(volatile uint32_t*)(base_addr_ + offset/4) = value;
 }
     
+//===========================================================================//
+
+/**
+ * @brief Register multiple read.
+ */
 uint32_t Register::multi_access_read( uint16_t offset )
 {
     return *(volatile uint32_t*)(base_addr_ + offset/4);
 }
 
+//===========================================================================//
+
+/**
+ * @brief End of register multiple access.
+ */
 void Register::multi_access_end()
 {
     xSemaphoreGive( mutex_ );
 }
 
+//===========================================================================//
 
+/**
+ * @brief Register single access task function.
+ */
 void Register::single_access_task()
 {
     RegisterSingleAccessReq  req;
     RegisterSingleAccessResp resp;
 
     uint16_t offset;
-
-    //auto param = static_cast<reg_single_access_task_param_t*>(pvParameters);
 
     while(1)
     {
@@ -115,17 +162,35 @@ void Register::single_access_task()
     }
 }
 
+//===========================================================================//
+
+/**
+ * @brief Create register single access task.
+ */
 
 void Register::create_register_single_access_task()
 {
-    auto task_func = std::make_unique<std::function<void()>>([this]() { single_access_task(); });
-    xTaskCreate( task_wrapper, "Register Single Access", 1000, &task_func, 1, NULL );
+    task_cfg_ = { .entry = [](void* ctx) { static_cast<Register*>(ctx)->single_access_task(); },
+                  .context = this
+                };
+
+    xTaskCreateStatic( task_wrapper
+                     , "Register Single Access"
+                     , TASK_STACK_SIZE
+                     , &task_cfg_
+                     , TASK_PRIORITY
+                     , task_stack_
+                     , &task_tcb_ );
 }
 
+//===========================================================================//
 
+/**
+ * @brief Create register access tasks.
+ */
 void Register::create_register_access_tasks()
 {
     create_register_single_access_task();
 }
 
-//=========================================
+//===========================================================================//

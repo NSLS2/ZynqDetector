@@ -1,9 +1,25 @@
+/**
+ * @file Mars.cpp
+ * @brief Member function definitions of `Mars`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
+
+//===========================================================================//
+
 #include "Register.hpp"
 
+//===========================================================================//
 
-//===============================================================
-// Constructor.
-//===============================================================
+/**
+ * @brief Mars constructor.
+ * @param reg Reference to the register.
+ * @param mars_access_req_queue Queue for passing MARS access requests.
+ */
 template<typename DerivedNetwork>
 Mars<DerivedNetwork>::Mars( Register&            reg
                           , QueueHandle_t const  mars_access_req_queue
@@ -11,12 +27,12 @@ Mars<DerivedNetwork>::Mars( Register&            reg
                           : reg_       ( reg                   )
                           , req_queue_ ( mars_access_req_queue )
 {}
-//===============================================================
 
+//===========================================================================//
 
-//===============================================================
-// Stuff Mars by writing loads.
-//===============================================================
+/**
+ * @brief Stuff MARS by writing loads.
+ */
 template<typename DerivedNetwork>
 void Mars<DerivedNetwork>::stuff_mars( const uint32_t (&loads)[12][14] )
 {
@@ -46,31 +62,37 @@ void Mars<DerivedNetwork>::stuff_mars( const uint32_t (&loads)[12][14] )
 
     reg_.multi_access_end();
 }
-//===============================================================
 
+//===========================================================================//
 
-//===============================================================
-// Create Mars task.
-//===============================================================
+/**
+ * @brief Create MARS access task.
+ */
 template<typename DerivedNetwork>
 void Mars<DerivedNetwork>::create_device_access_tasks()
 {
-    auto task_func = std::make_unique<std::function<void()>>([this]() { mars_cfg_task(); });
-    xTaskCreate( task_wrapper
+    task_cfg_ = { .entry = [](void* ctx) { static_cast<Mars<DerivedNetwork>*>(ctx)->task(); },
+                  .context = this
+                };
+
+    xTaskCreateStatic( task_wrapper
                , "MARS Cfg"
-               , 1000
-               , &task_func
+               , TASK_STACK_SIZE
+               , &task_cfg_
                , 1
-               , NULL
+               , task_stack_
+               , &task_tcb_
                );
 }
 
 
-//===============================================================
-// MARS task definition.
-//===============================================================
+//===========================================================================//
+
+/**
+ * @brief MARS access task function.
+ */
 template<typename DerivedNetwork>
-void Mars<DerivedNetwork>::mars_cfg_task()
+void Mars<DerivedNetwork>::task()
 {
     MarsAccessReq  req;
 
@@ -84,5 +106,6 @@ void Mars<DerivedNetwork>::mars_cfg_task()
         stuff_mars( req.loads );
     }
 }
-//===============================================================
+
+//===========================================================================//
 

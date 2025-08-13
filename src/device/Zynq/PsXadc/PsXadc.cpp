@@ -100,8 +100,16 @@ void PsXadc::task()
 
 void PsXadc::create_psxadc_task()
 {
-    //auto task_func = std::make_unique<std::function<void()>>([this]() { task(); });
-    auto task_func = new std::function<void()>([this]() { task(); });
+    task_cfg_ = { .entry = [](void* ctx) { static_cast<PsXadc*>(ctx)->task(); },
+                  .context = this
+                };
 
-    xTaskCreate( task_wrapper, name_.c_str(), 1000, &task_func, 1, NULL );
+    xTaskCreateStatic( task_wrapper
+                     , "PsXadc"
+                     , TASK_STACK_SIZE
+                     , &task_cfg_
+                     , TASK_PRIORITY
+                     , task_stack_
+                     , &task_tcb_
+                     );
 }

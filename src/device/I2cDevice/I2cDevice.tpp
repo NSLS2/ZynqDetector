@@ -1,66 +1,32 @@
+/**
+ * @file I2cDevice.cpp
+ * @brief Member function definitions of `I2cDevice`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
+
+//===========================================================================//
+
 #include "FreeRTOS.h"
 
+//===========================================================================//
 
-//============================================
-// I2cDevice constructor.
-//============================================
+/**
+ * @brief I2cDevice constructor.
+ */
 template< typename I2cType >
-I2cDevice<I2cType>::I2cDevice( /*const I2cType&                     i2c
-                             , */uint8_t                            i2c_addr
-                             , const QueueHandle_t                req_queue
-                             //, const std::map<uint16_t, uint8_t>& chan_assign
-                             , const Logger&                      logger
+I2cDevice<I2cType>::I2cDevice( uint8_t              i2c_addr
+                             , const QueueHandle_t  req_queue
+                             , const Logger&        logger
                              )
 //   requires IsSameType<T, PsI2c>
-                               : /*i2c_         ( i2c                                )
-                               , */i2c_addr_    ( i2c_addr                           )
-                               , req_queue_   ( req_queue                          )
-                               //, chan_assign_ ( chan_assign                        )
-                               , logger_      ( logger                             )
+                               : i2c_addr_    ( i2c_addr  )
+                               , req_queue_   ( req_queue )
+                               , logger_      ( logger    )
 {}
 
-////============================================
-//// I2cDevice write.
-//// Requires the ID of the physical variable.
-////============================================
-//template<typename T>
-//void I2cDevice<T>::write( const uint16_t var, const uint8_t data )
-////requires IsSameType<T, PsI2c>
-//{
-//    if( chan_assign_.find(var) != chan_assign_.end() )
-//    {
-//        pack_req();
-//        
-//        xQueueSend( req_queue_,
-//            	    req_,
-//                    0UL );
-//    }
-//    //else
-//    //{
-//    //    log_error( "Variable %u not found\n", static_cast<uint32_t>(variable) );
-//    //}
-//}
-////============================================
-//
-////============================================
-//// I2cDevice read.
-//// Requires the ID of the physical variable.
-////============================================
-//template<typename T>
-//void I2cDevice<T>::read( uint16_t var )
-////requires IsSameType<T, PsI2c>
-//{
-//    if( chan_assign_.find(var) != chan_assign_.end() )
-//    {
-//        pack_req( chan );
-//        
-//        xQueueSend( req_queue_,
-//            	    req_,
-//                    0UL );
-//    }
-//    //else
-//    //{
-//    //    log_error( "Variable %u not found\n", static_cast<uint32_t>(variable) );
-//    //}
-//}
-////============================================
+//===========================================================================//
