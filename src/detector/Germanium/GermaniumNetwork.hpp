@@ -1,9 +1,22 @@
+/**
+ * @file GermaniumNetwork.hpp
+ * @brief Class template definition of `GermaniumNetwork`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
 #pragma once
+
+//===========================================================================//
 
 #include "Network.hpp"
 #include "PsI2c.hpp"
 #include "PsXadc.hpp"
 
+//===========================================================================//
 
 class GermaniumNetwork : public Network<GermaniumNetwork>
 {
@@ -26,9 +39,7 @@ public:
                     , const Logger&         logger
                     );
 
-    //===============================================================
-    // Message/operation IDs
-    //===============================================================
+    ///< Message/operation IDs
     static constexpr uint16_t MARS_CONF_LOAD    = 0;
     static constexpr uint16_t LEDS              = 1;
     static constexpr uint16_t MARS_CONFIG       = 2;
@@ -63,10 +74,6 @@ public:
     static constexpr uint16_t COUNT_TIME        = 53;
     static constexpr uint16_t FRAME_NO          = 54;
     static constexpr uint16_t COUNT_MODE        = 55;
-    //static constexpr uint16_t UPDATE_LOADS      = 100;
-    //static constexpr uint16_t STUFF_MARS        = 101;
-    //static constexpr uint16_t AD9252_CNFG       = 102;
-    //static constexpr uint16_t ZDDM_ARM          = 103;
     static constexpr uint16_t HV                = 150;  // High voltage
     static constexpr uint16_t HV_CUR            = 151;  // High voltage current
     static constexpr uint16_t TEMP1             = 160;  // Temperature 1
@@ -86,11 +93,8 @@ public:
     Network<GermaniumNetwork>* base_;
 
     std::map<uint32_t, std::function<void(const UdpRxMsg&)>> rx_instr_map_;
-    //===============================================================
-    // Data types
-    //===============================================================
-    
-    // UDP request message payload
+
+    ///< Data types
     
     //-----------------------------
     struct SingleWordReqMsgPayload
@@ -122,9 +126,6 @@ public:
         StuffMarsReqMsgPayload   stuff_mars;
         ZddmArmReqMsgPayload     zddm_arm;
     };
-    //===============================================================
-
-    // UDP response message payload
 
     //-----------------------------
     struct SingleWordRespMsgPayload
@@ -150,19 +151,26 @@ public:
         PsXadcRespMsgPayload     psxadc;
     };
 
-    //===============================================================    
-
+    /**
+     * @brief Register I2C access message handlers.
+     */
     void register_i2c_handlers( const std::map<uint16_t, I2cAccessHandler>& handlers );
-    size_t tx_msg_proc( UdpTxMsg &msg );
+
+    /**
+     * @brief Tx message process.
+     */
+    size_t tx_msg_proc_special( UdpTxMsg &msg );
+
+    /**
+     * @brief Rx message process.
+     */
+    void rx_msg_proc_special( const UdpRxMsg& msg );
 
 protected:
-    void rx_msg_map_init();
 
     void proc_register_single_access_msg( const UdpRxMsg& msg );
-    //void proc_register_multi_access_msg ( const UdpRxMsg& msg );
     void proc_psi2c_access_msg          ( const UdpRxMsg& msg );
     void proc_psxadc_access_msg         ( const UdpRxMsg& msg );
-    //void proc_update_loads_msg          ( const char* loads );
     void proc_ad9252_access_msg         ( const UdpRxMsg& msg );
     void proc_mars_access_msg           ( const UdpRxMsg& msg );
     void proc_zddm_access_msg           ( const UdpRxMsg& msg );
@@ -183,9 +191,12 @@ private:
     const Logger&  logger_;
 
     std::map<uint16_t, I2cAccessHandler> i2c_access_dispatch_map_;
-
-
 };
+
+//===========================================================================//
 
 using UdpRxMsg = typename Network<GermaniumNetwork>::UdpReqMsg;
 using UdpTxMsg = typename Network<GermaniumNetwork>::UdpRespMsg;
+
+//===========================================================================//
+

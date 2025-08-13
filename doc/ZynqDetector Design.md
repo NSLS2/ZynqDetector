@@ -1518,3 +1518,45 @@ private:
 ```
 
 
+Performance Recommendations
+
+- Task & Queue Optimization:
+
+  - Review if all components need a dedicated task. RTOS task switching has nonzero overhead. If some components are accessed infrequently, consider consolidating handlers.
+
+  - Static Initialization of queues and tasks is supported if `configSUPPORT_STATIC_ALLOCATION == 1` (a best practice for RTOS systems with tight memory constraints).
+
+  - Memory Buffers (e.g., `xStack1`, `ucQueueStorageArea`) are pre-allocated — avoids heap fragmentation and is RTOS-friendly.
+
+  - Split Responsibilities: `create_detector_queues()`, `create_components()`, and handler registration are cleanly modularized for both clarity and potential parallel initialization. 
+
+  - We’ll want to analyze the implementation of:
+
+    - `create_detector_queues()`
+
+    - `create_components()`
+
+    - I2C and ADC handler setup (how function dispatch is done)
+
+    - Task creation and scheduling behavior
+
+- Replace `std::function` if Needed:
+
+  - If instruction handlers are called frequently, `std::function<void()>` may be slower than raw function pointers or functors.
+
+- Consider Stack Allocation Where Safe:
+
+  - `std::unique_ptr` is fine, but avoid heap usage for components that can be constructed statically or on the stack — especially if initialization time is critical.
+
+- Reduce Queue Depths (if RTOS default is high):
+
+  - Queues use RAM. Ensure they're right-sized for actual traffic.
+
+- Ensure Cache Alignment:
+
+  - Data like `uint16_t loads[12][14];` may benefit from cache-line alignment or padding if used in tight loops or DMA.
+
+- Avoid `while(1);` in main:
+
+  -Replace with `vTaskDelay(portMAX_DELAY);` to yield CPU time.
+

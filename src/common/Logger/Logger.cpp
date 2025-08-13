@@ -1,3 +1,16 @@
+/**
+ * @file Logger.cpp
+ * @brief Member function definitions of `Logger`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
+
+//===========================================================================//
+
 #include "xil_printf.h"
 #include <cstdarg>
 #include <cstdio>
@@ -5,36 +18,38 @@
 #include "Register.hpp"
 #include "Logger.hpp"
 
-//Logger::Logger( Register& reg )
-//    : reg_ ( reg )
-//    , control_word_(0x01)
-//{
-//    mutex_ = xSemaphoreCreateMutex();
-//    
-//    if ( mutex_ == NULL )
-//    {
-//        xil_printf( "Failed to create Logger control mutex.\n" );
-//    }
-//}
+//===========================================================================//
 
+/**
+ * @brief Receive reference to the register. To be called by GermaniumDetector.
+ * @param reg Reference to the register.
+ */
 void Logger::set_register( Register* reg )
 {
     reg_ = reg;
 }
 
-
+/** 
+ * @brief Set log control value.
+ * @param control Log control value.
+ */
 void Logger::set_log_control(uint8_t control)
 {
     control_word_ = control | 0x01;
 }
 
-
+/** 
+ * @brief Read log control value.
+ */
 uint8_t Logger::read_log_control()
 {
     return control_word_;
 }
 
-
+/** 
+ * @brief Log error.
+ * @param format Log format.
+ */
 void Logger::log_error(const char *format, ...) const
 {
     va_list args;
@@ -43,7 +58,11 @@ void Logger::log_error(const char *format, ...) const
     va_end(args);
 }
 
-
+/** 
+ * @brief Log error with error code.
+ * @param error_code Error code.
+ * @param format Log format.
+ */
 void Logger::log_error(uint32_t error_code, const char *format, ...) const
 {
     reg_->set_status(error_code);
@@ -54,7 +73,10 @@ void Logger::log_error(uint32_t error_code, const char *format, ...) const
     va_end(args);
 }
 
-
+/**
+ * @brief Log warning.
+ * @param Log format.
+ */
 void Logger::log_warn(const char *format, ...) const
 {
     va_list args;
@@ -63,7 +85,10 @@ void Logger::log_warn(const char *format, ...) const
     va_end(args);
 }
 
-
+/**
+ * @brief Log debug information.
+ * @param format Log format.
+ */
 void Logger::log_debug(const char *format, ...) const
 {
     va_list args;
@@ -72,7 +97,11 @@ void Logger::log_debug(const char *format, ...) const
     va_end(args);
 }
 
-
+/**
+ * @brief Log general information.
+ * @param type Log type.
+ * @param format Log format.
+ */
 void Logger::log(LogType type, const char *format, ...) const
 {
     if (type & control_word_)
@@ -84,7 +113,12 @@ void Logger::log(LogType type, const char *format, ...) const
     }
 }
 
-
+/**
+ * @brief Log general information with color.
+ * @param type Log type.
+ * @param color Log print color.
+ * @param format Log format.
+ */
 void Logger::log(LogType type, char* color, const char *format, ...) const
 {
     if (type & control_word_)
@@ -96,7 +130,9 @@ void Logger::log(LogType type, char* color, const char *format, ...) const
     }
 }
 
-
+/**
+ * @brief Print.
+ */
 void Logger::xvprintf(const char* format, va_list args) const
 {
     char buf[256];
@@ -104,27 +140,31 @@ void Logger::xvprintf(const char* format, va_list args) const
     xil_printf("%s", buf);
 }
 
-
-// Private helper method to centralize va_list handling and actual printing
-
+/**
+ * @brief Private helper method to centralize va_list handling and actual
+ *        printing.
+ * @param type Log type.
+ * @param color Log print color.
+ * @param format Log format.
+ * @param args Information to be printed.
+ */
 void Logger::log_va(LogType type, const char* color, const char *format, va_list args) const
 {
     if ( type & control_word_ )
     {
-        // Print color code if provided
+        ///< Print color code if provided
         if (color)
             xil_printf("%s", color);
 
-        // Print prefix, e.g., "[ERROR] file.cpp:123: "
-        //xil_printf(log_leaders_[log_type_to_index(type)], __FILE__, __LINE__);
         xil_printf(log_leaders_[type], __FILE__, __LINE__);
 
-        // Print actual log message
+        ///< Print actual log message
         xvprintf(format, args);
 
-        // Reset color if applied
+        ///< Reset color if applied
         if (color)
             xil_printf("%s", RESET_TEXT);
     }
 }
 
+//===========================================================================//

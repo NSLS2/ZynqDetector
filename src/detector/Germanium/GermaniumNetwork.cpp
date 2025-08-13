@@ -1,3 +1,16 @@
+/**
+ * @file Zddm.cpp
+ * @brief Member function definitions of `Zddm`.
+ *
+ * @author Ji Li <liji@bnl.gov>
+ * @date 08/11/2025
+ * @copyright
+ * Copyright (c) 2025 Brookhaven National Laboratory
+ * @license BSD 3-Clause License. See LICENSE file for details.
+ */
+
+//===========================================================================//
+
 #include <cstring>
 
 #include "FreeRTOS.h"
@@ -8,6 +21,8 @@
 #include "PsXadc.hpp"
 //#include "Network.hpp"
 #include "GermaniumNetwork.hpp"
+
+//===========================================================================//
 
 GermaniumNetwork::GermaniumNetwork( const QueueHandle_t   register_single_access_req_queue
                                   , const QueueHandle_t   register_single_access_resp_queue
@@ -34,57 +49,128 @@ GermaniumNetwork::GermaniumNetwork( const QueueHandle_t   register_single_access
                                   , mars_access_req_queue_              ( mars_access_req_queue             )
                                   , zddm_access_req_queue_              ( zddm_access_req_queue             )
                                   , logger_                             ( logger                            )
-{
-    rx_msg_map_init();
-}
+{}
 
 
-//===============================================================
-// Initialize Rx message process handling map.
-//===============================================================
-void GermaniumNetwork::rx_msg_map_init()
+//===========================================================================//
+
+/**
+ * @brief Rx message process.
+ * @param msg Received UDP message.
+ */
+void GermaniumNetwork::rx_msg_proc_special( const UdpRxMsg& msg )
 {
+    switch( msg.op & 0x8000 )
+    {
     // Register single access
-    this->rx_instr_map_[EVENT_FIFO_CTRL] = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[DETECTOR_TYPE]   = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[MARS_RDOUT_ENB]  = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[TRIG]            = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[FRAME_NO]        = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[COUNT_TIME_LO]   = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[COUNT_TIME_HI]   = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[MARS_CONF_LOAD]  = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[ADC_SPI]         = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[VERSIONREG]      = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[MARS_PIPE_DELAY] = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[TD_CAL]          = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[COUNT_MODE]      = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[CALPULSE_RATE]   = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[CALPULSE_WIDTH]  = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[CALPULSE_CNT]    = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[MARS_CALPULSE]   = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[CALPULSE_MODE]   = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[UDP_IP_ADDR]     = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[EVENT_FIFO_CNT]  = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
-    this->rx_instr_map_[EVENT_FIFO_DATA] = [this]( const UdpRxMsg& msg ) { proc_register_single_access_msg( msg ); };
+        case (EVENT_FIFO_CTRL) :
+            proc_register_single_access_msg( msg );
+            break;
+        case (DETECTOR_TYPE)   :
+            proc_register_single_access_msg( msg );
+            break;
+        case (MARS_RDOUT_ENB)  :
+            proc_register_single_access_msg( msg );
+            break;
+        case (TRIG)            :
+            proc_register_single_access_msg( msg );
+            break;
+        case (FRAME_NO)        :
+            proc_register_single_access_msg( msg );
+            break;
+        case (COUNT_TIME_LO)   :
+            proc_register_single_access_msg( msg );
+            break;
+        case (COUNT_TIME_HI)   :
+            proc_register_single_access_msg( msg );
+            break;
+        case (MARS_CONF_LOAD)  :
+            proc_register_single_access_msg( msg );
+            break;
+        case (ADC_SPI)         :
+            proc_register_single_access_msg( msg );
+            break;
+        case (VERSIONREG)      :
+            proc_register_single_access_msg( msg );
+            break;
+        case (MARS_PIPE_DELAY) :
+            proc_register_single_access_msg( msg );
+            break;
+        case (TD_CAL)          :
+            proc_register_single_access_msg( msg );
+            break;
+        case (COUNT_MODE)      :
+            proc_register_single_access_msg( msg );
+            break;
+        case (CALPULSE_RATE)   :
+            proc_register_single_access_msg( msg );
+            break;
+        case (CALPULSE_WIDTH)  :
+            proc_register_single_access_msg( msg );
+            break;
+        case (CALPULSE_CNT)    :
+            proc_register_single_access_msg( msg );
+            break;
+        case (MARS_CALPULSE)   :
+            proc_register_single_access_msg( msg );
+            break;
+        case (CALPULSE_MODE)   :
+            proc_register_single_access_msg( msg );
+            break;
+        case (UDP_IP_ADDR)     :
+            proc_register_single_access_msg( msg );
+            break;
+        case (EVENT_FIFO_CNT)  :
+            proc_register_single_access_msg( msg );
+            break;
+        case (EVENT_FIFO_DATA) :
+            proc_register_single_access_msg( msg );
+            break;
 
-    // Sensor components access
-    this->rx_instr_map_[STUFF_MARS]      = [this]( const UdpRxMsg& msg ) { proc_mars_access_msg( msg ); };
-    this->rx_instr_map_[ADC_CLK_SKEW]    = [this]( const UdpRxMsg& msg ) { proc_ad9252_access_msg( msg ); };
-    this->rx_instr_map_[ZDDM_ARM]        = [this]( const UdpRxMsg& msg ) { proc_zddm_access_msg( msg ); };
+        case (STUFF_MARS)      :
+            proc_mars_access_msg( msg );
+            break;
+        case (ADC_CLK_SKEW)    :
+            proc_ad9252_access_msg( msg );
+            break;
+        case (ZDDM_ARM)        :
+            proc_zddm_access_msg( msg );
+            break;
 
-    // Peripheral access
-    this->rx_instr_map_[HV]              = [this]( const UdpRxMsg& msg ) { proc_psi2c_access_msg( msg ); };
-    this->rx_instr_map_[HV_CUR]          = [this]( const UdpRxMsg& msg ) { proc_psi2c_access_msg( msg ); };
-    this->rx_instr_map_[TEMP1]           = [this]( const UdpRxMsg& msg ) { proc_psi2c_access_msg( msg ); };
-    this->rx_instr_map_[TEMP2]           = [this]( const UdpRxMsg& msg ) { proc_psi2c_access_msg( msg ); };
-    this->rx_instr_map_[TEMP3]           = [this]( const UdpRxMsg& msg ) { proc_psi2c_access_msg( msg ); };
-    this->rx_instr_map_[DAC_INT_REF]     = [this]( const UdpRxMsg& msg ) { proc_psi2c_access_msg( msg ); };
+        case (HV)              :
+            proc_psi2c_access_msg( msg );
+            break;
+        case (HV_CUR)          :
+            proc_psi2c_access_msg( msg );
+            break;
+        case (TEMP1)           :
+            proc_psi2c_access_msg( msg );
+            break;
+        case (TEMP2)           :
+            proc_psi2c_access_msg( msg );
+            break;
+        case (TEMP3)           :
+            proc_psi2c_access_msg( msg );
+            break;
+        case (DAC_INT_REF)     :
+            proc_psi2c_access_msg( msg );
+            break;
 
-    // XADC access
-    this->rx_instr_map_[ZTEMP]          = [this]( const UdpRxMsg& msg ) { proc_psxadc_access_msg( msg ); };
+        case (ZTEMP)           :
+            proc_psxadc_access_msg( msg );
+            break;
+    }
 }
 
-void GermaniumNetwork::register_i2c_handlers( const std::map<uint16_t, I2cAccessHandler>& handlers)
+//===========================================================================//
+
+/**
+ * @brief Register I2C access message handlers.
+ * @param handlers I2C access message handlers, created by GermaniumDetector.
+ */
+void GermaniumNetwork::register_i2c_handlers( const std::map<uint16_t
+                                            , I2cAccessHandler>& handlers
+                                            )
 {
     for ( const auto& [op, fn] : handlers )
     {
@@ -95,11 +181,12 @@ void GermaniumNetwork::register_i2c_handlers( const std::map<uint16_t, I2cAccess
     }
 }
 
+//===========================================================================//
 
-
-//===============================================================
-// Process register single access message.
-//===============================================================
+/**
+ * @brief Process register single access message.
+ * @param msg Reference to the received message.
+ */
 void GermaniumNetwork::proc_register_single_access_msg( const UdpRxMsg& msg )
 {
     RegisterSingleAccessReq req;
@@ -111,13 +198,13 @@ void GermaniumNetwork::proc_register_single_access_msg( const UdpRxMsg& msg )
               , 0UL
               );
 }
-//===============================================================
 
+//===========================================================================//
 
-
-//===============================================================
-// Process AD9252 access message.
-//===============================================================
+/**
+ * @brief Process AD9252 access message.
+ * @param msg Reference to the received message.
+ */
 void GermaniumNetwork::proc_ad9252_access_msg( const UdpRxMsg& msg )
 {
     Ad9252AccessReq req;
@@ -130,11 +217,13 @@ void GermaniumNetwork::proc_ad9252_access_msg( const UdpRxMsg& msg )
               , 0UL
               );
 }
-//===============================================================
 
-//===============================================================
-// Process MARS access message.
-//===============================================================
+//===========================================================================//
+
+/**
+ * @brief Process MARS access message.
+ * @param msg Reference to the received message.
+ */
 void GermaniumNetwork::proc_mars_access_msg( const UdpRxMsg& msg )
 {
     MarsAccessReq req;
@@ -145,11 +234,13 @@ void GermaniumNetwork::proc_mars_access_msg( const UdpRxMsg& msg )
               , 0UL
               );
 }
-//===============================================================
 
-//===============================================================
-// Process ZDDM access message.
-//===============================================================
+//===========================================================================//
+
+/**
+ * @brief Process ZDDM access message.
+ * @param msg Reference to the received message.
+ */
 void GermaniumNetwork::proc_zddm_access_msg( const UdpRxMsg& msg )
 {
     ZddmAccessReq req;
@@ -161,13 +252,13 @@ void GermaniumNetwork::proc_zddm_access_msg( const UdpRxMsg& msg )
               , 0UL
               );
 }
-//===============================================================
 
+//===========================================================================//
 
-
-//===============================================================
-// Process I2C bus access message.
-//===============================================================
+/**
+ * @brief Process I2C bus access message.
+ * @param msg Reference to the received message.
+ */
 void GermaniumNetwork::proc_psi2c_access_msg( const UdpRxMsg& msg )
 {
     auto it = i2c_access_dispatch_map_.find( msg.op );
@@ -181,11 +272,13 @@ void GermaniumNetwork::proc_psi2c_access_msg( const UdpRxMsg& msg )
         logger_.log_error( "Unhandled opcode: ", msg.op );
     }
 }
-//===============================================================
 
-//===============================================================
-// Process XADC access message.
-//===============================================================
+//===========================================================================//
+
+/**
+ * @brief Process XADC access message.
+ * @param msg Reference to the received message.
+ */
 void GermaniumNetwork::proc_psxadc_access_msg( const UdpRxMsg& msg )
 {
     PsXadcAccessReq req;
@@ -206,13 +299,14 @@ void GermaniumNetwork::proc_psxadc_access_msg( const UdpRxMsg& msg )
               , 0UL
               );
 }
-//===============================================================
 
+//===========================================================================//
 
-//===============================================================
-// Compose Tx message.
-//===============================================================
-size_t GermaniumNetwork::tx_msg_proc( UdpTxMsg& msg )
+/**
+ * @brief Process message to be sent.
+ * @param msg Reference to the message to be sent.
+ */
+size_t GermaniumNetwork::tx_msg_proc_special( UdpTxMsg& msg )
 {
     QueueSetHandle_t resp_queue_set;
     resp_queue_set = xQueueCreateSet(50);
@@ -222,8 +316,6 @@ size_t GermaniumNetwork::tx_msg_proc( UdpTxMsg& msg )
     xQueueAddToSet( psxadc_access_resp_queue_, resp_queue_set );
 
     QueueSetMemberHandle_t active_queue;
-
-    //uint16_t msg_leng;
 
     active_queue = (QueueHandle_t)xQueueSelectFromSet(resp_queue_set, portMAX_DELAY);
 
@@ -263,4 +355,6 @@ size_t GermaniumNetwork::tx_msg_proc( UdpTxMsg& msg )
     }
     return 0;
 }
-//===============================================================
+
+//===========================================================================//
+
