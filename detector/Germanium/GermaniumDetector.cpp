@@ -254,8 +254,20 @@ void GermaniumDetector::init_hardware()
     init_mars_defaults();
 
     ///< Set detector model and readout enable
-    zynq_->reg().write( GermaniumReg::DETECTOR_MODEL, 1 );  ///< 384-ch
-    zynq_->reg().write( GermaniumReg::MARS_RDOUT_ENB, 0x8FFF );
+    uint32_t det_model;
+    uint32_t mars_rdout_enable;
+    if ( active_channels_ == 192 )
+    {
+        det_model = 0;
+        mars_rdout_enable = 0x8AAA;
+    }
+    else
+    {
+        det_model = 1;
+        mars_rdout_enable = 0x8FFF;
+    }
+    zynq_->reg().write( GermaniumReg::DETECTOR_MODEL, det_model );
+    zynq_->reg().write( GermaniumReg::MARS_RDOUT_ENB, mars_rdout_enable );
 
     logger_.log_debug("GermaniumDetector: hardware init complete");
 }

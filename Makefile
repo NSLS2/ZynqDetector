@@ -7,7 +7,7 @@ TARGET := bin/GermaniumDetector
 BUILD_DIR := build
 
 SOURCES := \
-	detector_main.cpp \
+	main.cpp \
 	common/Logger/Logger.cpp \
 	common/DeviceWorker/DeviceWorker.cpp \
 	common/AsyncWorker/AsyncWorker.cpp \
@@ -17,7 +17,7 @@ SOURCES := \
 	detector/Germanium/GermaniumDetector.cpp \
 	detector/Germanium/GermaniumZynq.cpp \
 	detector/Germanium/GermaniumZMQ.cpp \
-	detector/Germanium/GermaniumParamFormat.cpp
+	detector/Germanium/GermaniumDetectorProtocol.cpp
 
 INCLUDE_DIRS := \
 	common/base \
