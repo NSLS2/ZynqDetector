@@ -1,27 +1,23 @@
-# Ignore build output directory
-/build
-/export
-/out
+# Build outputs
+/build/
+/bin/
+/GermaniumDetector
+*.o
+*.d
 
-# Ignore object files and dependent files
-.o
-.d
+# Generated local files
+/compile_commands.json
+/build.log
+*.log
+*.lock
+/.vscode/
+/.vitisWorkspace.json
+*.bin
+*.pdi
 
-#Ignore logs folder and log files
-/logs
-.log
-
-#Ignore lock files
-.lock
-
-/src/bin
-.bin
-.pdi
-.vitisWorkspace.json
-
-_ide/logs
-_ide/.wsdata
-
-# Ignore vscode
-/src/.vscode
-.vscode
+# Legacy Vitis/FreeRTOS project files kept only in local working copies
+/src/
+/_ide/
+/doc/
+/scripts/
+/vitis-comp.json
